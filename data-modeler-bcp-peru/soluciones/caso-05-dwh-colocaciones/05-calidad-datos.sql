@@ -21,8 +21,18 @@ LIMIT 20;
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Kimball' AS familia,
-           'Toda dimension tiene su miembro DESCONOCIDO (sk = -1)' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: hechos de movimiento' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM fact_movimiento) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Kimball',
+           'Toda dimension tiene su miembro DESCONOCIDO (sk = -1)',
            ((SELECT COUNT(*) FROM dim_tiempo   WHERE tiempo_sk   = -1) <> 1)::INT
          + ((SELECT COUNT(*) FROM dim_ubigeo   WHERE ubigeo_sk   = -1) <> 1)::INT
          + ((SELECT COUNT(*) FROM dim_oficina  WHERE oficina_sk  = -1) <> 1)::INT

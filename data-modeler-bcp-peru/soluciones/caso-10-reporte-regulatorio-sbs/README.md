@@ -29,7 +29,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | `reporte_error` | 12 | 11 reclasificaciones indebidas + 1 saldo en cero, todas en junio |
 | `cuadre_reporte` | 15 | 2 conceptos por envío original + 1 en el rectificatorio |
 
-Y **16 reglas de calidad en `OK`**.
+Y **17 reglas de calidad en `OK`**.
 
 ### La narrativa que debe aparecer en PN-01 y PN-05
 

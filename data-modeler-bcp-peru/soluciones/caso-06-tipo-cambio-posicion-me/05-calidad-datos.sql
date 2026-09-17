@@ -19,8 +19,18 @@ LIMIT 20;
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Completitud' AS familia,
-           'Todo dia del calendario tiene tipo de cambio vigente para USD contable' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: cotizaciones publicadas' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM tipo_cambio_publicado) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Completitud',
+           'Todo dia del calendario tiene tipo de cambio vigente para USD contable',
            (SELECT COUNT(*) FROM cat_calendario c
             WHERE c.fecha > (SELECT MIN(fecha) FROM tipo_cambio_publicado WHERE moneda_cod = 'USD')
               AND NOT EXISTS (SELECT 1 FROM tipo_cambio_vigente v

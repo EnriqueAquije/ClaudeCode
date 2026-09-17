@@ -168,7 +168,11 @@ LANGUAGE sql STABLE AS $$
     SELECT CASE
         WHEN p_moneda = 'PEN' THEN ROUND(p_monto, 2)
         ELSE ROUND(p_monto * (SELECT v.valor
-                              FROM   tipo_cambio_vigente v
+                              -- El esquema va CALIFICADO a proposito: sin eso, la funcion solo
+                              -- funciona "desde su casa" y falla al invocarla desde otro esquema,
+                              -- porque depende del search_path de quien la llama. Es el mismo
+                              -- error que documenta el caso 02.
+                              FROM   caso06.tipo_cambio_vigente v
                               WHERE  v.fecha       = p_fecha
                                 AND  v.moneda_cod  = p_moneda
                                 AND  v.tipo_tc_cod = p_tipo_tc), 2)

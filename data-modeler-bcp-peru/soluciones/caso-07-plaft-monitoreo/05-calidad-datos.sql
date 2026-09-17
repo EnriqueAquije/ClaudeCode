@@ -20,8 +20,18 @@ WHERE  a.regla_cod = 'R02-FRACC'
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Regulatoria' AS familia,
-           'Toda operacion del Registro supera efectivamente su umbral' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: operaciones monitoreadas' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM operacion) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Regulatoria',
+           'Toda operacion del Registro supera efectivamente su umbral',
            (SELECT COUNT(*) FROM registro_operacion WHERE monto_operacion < monto_umbral) AS incumple
     UNION ALL
     SELECT 'CAL-02', 'Integridad referencial', 'Toda alerta corresponde a una regla vigente a su fecha',

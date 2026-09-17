@@ -14,8 +14,18 @@ SELECT COUNT(*) AS filas_en_default FROM transferencia_default;
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Dominio' AS familia,
-           'Ninguna billetera con saldo negativo' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: movimientos de billetera' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM movimiento_billetera) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Dominio',
+           'Ninguna billetera con saldo negativo',
            (SELECT COUNT(*) FROM saldo_billetera WHERE saldo < 0) AS incumple
     UNION ALL
     SELECT 'CAL-02', 'Cuadre', 'Saldo = suma de movimientos del libro mayor',

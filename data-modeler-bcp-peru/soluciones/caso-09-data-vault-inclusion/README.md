@@ -20,7 +20,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | `sat_persona_ingreso` | 2 000 | 1 500 + **500**: solo cambió 1 de cada 3 |
 | `sat_persona_canal_digital` | 1 600 | **Satélite nuevo** de la ola 2026 |
 
-Y **15 reglas de calidad en `OK`**.
+Y **16 reglas de calidad en `OK`**.
 
 > **La fila que resume el caso:** el satélite de ingreso creció 500 y no 1 500. Esa diferencia,
 > multiplicada por millones de personas y por cargas mensuales, es la razón económica del `hash_diff`.

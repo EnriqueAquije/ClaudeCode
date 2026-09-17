@@ -9,6 +9,9 @@
 
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- unaccent se instala para poder usarla en consultas ad hoc y en el arranque exploratorio.
+-- OJO: NO se puede usar en la columna generada de mas abajo, porque es STABLE y no IMMUTABLE.
+-- Ver la nota en la seccion 2.
 CREATE EXTENSION IF NOT EXISTS unaccent;
 
 DROP SCHEMA IF EXISTS caso08 CASCADE;
@@ -65,15 +68,30 @@ COMMENT ON TABLE cliente_fuente IS
     'faltantes SE CONSERVAN: son el insumo del proceso de matching, no un problema a ocultar.';
 
 -- Clave de comparación normalizada (columna generada): quita tildes, espacios y mayúsculas.
+--
+-- POR QUÉ `TRANSLATE` Y NO `unaccent()`:
+-- `unaccent()` es la función obvia, y NO se puede usar aquí: depende de un diccionario
+-- configurable, así que PostgreSQL la declara STABLE, y una columna generada exige
+-- IMMUTABLE. `TRANSLATE` sí es IMMUTABLE porque el mapeo va escrito en la propia expresión.
+--
+-- Y el orden importa: primero se quitan las tildes, DESPUÉS se pasa a mayúsculas. Al revés
+-- no funciona, porque `UPPER('ñ')` devuelve 'ñ' sin tocarla cuando la base usa la
+-- intercalación C. Con `TRANSLATE` delante, 'Muñóz José' y 'MUNOZ JOSE' generan la misma
+-- clave — que es justamente lo que un MDM de apellidos peruanos necesita.
 ALTER TABLE cliente_fuente
     ADD COLUMN nombre_normalizado VARCHAR(200)
     GENERATED ALWAYS AS (
-        UPPER(TRIM(REGEXP_REPLACE(
+        UPPER(TRANSLATE(TRIM(REGEXP_REPLACE(
             COALESCE(razon_social, COALESCE(ape_paterno,'') || ' ' ||
                                    COALESCE(ape_materno,'') || ' ' ||
                                    COALESCE(nombres,'')),
-            '\s+', ' ', 'g')))
+            '\s+', ' ', 'g')),
+            'áéíóúüñÁÉÍÓÚÜÑ',
+            'aeiouunAEIOUUN'))
     ) STORED;
+COMMENT ON COLUMN cliente_fuente.nombre_normalizado IS
+    'Clave de comparacion: sin tildes, sin espacios repetidos, en mayusculas. '
+    'Es lo unico que se compara al hacer matching por nombre; el nombre original NO se toca.';
 
 -- =====================================================================================
 -- 3. CALIDAD DE CADA REGISTRO

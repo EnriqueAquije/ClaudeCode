@@ -259,7 +259,7 @@ Las longitudes salen de `reporte_campo`. Si la SBS cambia una longitud, se cambi
 
 ---
 
-## PASO 9 — Calidad (16 reglas)
+## PASO 9 — Calidad (17 reglas)
 
 Las decisivas:
 

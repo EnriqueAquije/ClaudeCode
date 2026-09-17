@@ -10,7 +10,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 350 titulares, 400 cuentas, 500 plásticos, 2 400 ciclos, **23 872**
-transacciones, **12 966** cuotas, 2 400 estados de cuenta y **12 reglas de calidad en `OK`**.
+transacciones, **12 966** cuotas, 2 400 estados de cuenta y **13 reglas de calidad en `OK`**.
 
 > Las cifras son **exactas, no aproximadas**: los datos se generan de forma determinista (sin
 > `random()`), así que tu ejecución debe dar estos mismos números. Si no coinciden, algo cambió en tu
@@ -31,8 +31,33 @@ transacciones, **12 966** cuotas, 2 400 estados de cuenta y **12 reglas de calid
 - *Validación en la capa de aplicación*: solo protege a quien pase por esa capa; una carga masiva o
   una corrección manual la evade.
 
-**Consecuencias.** Es imposible persistir un estado de cuenta descuadrado. Si la carga falla contra
-el `CHECK`, el proceso de carga está mal — y eso es información valiosa, no un obstáculo.
+**Consecuencias.** Es imposible persistir un estado de cuenta **internamente** descuadrado: las seis
+columnas de la fila siempre suman. Si la carga falla contra el `CHECK`, el proceso de carga está mal
+— y eso es información valiosa, no un obstáculo.
+
+**Cuidado con lo que este `CHECK` NO cubre, porque es justo el problema del enunciado.** Un
+`CHECK` solo ve una fila. Puede comprobar que `saldo_anterior + consumos + cargos − pagos =
+saldo_actual`, pero **no** puede comprobar que esos consumos coincidan con las transacciones reales
+del ciclo. Los seis números en cero cuadran perfectamente consigo mismos y contradicen todo el
+detalle:
+
+```sql
+-- Cuadra con el CHECK y es un estado de cuenta falso. Entra.
+UPDATE estado_cuenta
+SET    saldo_anterior = 0, total_consumos = 0, total_cargos = 0,
+       total_pagos = 0, saldo_actual = 0, pago_minimo = 0
+WHERE  estado_cuenta_id = 1;
+```
+
+Eso lo detecta **CAL-03**, que contrasta el estado contra el detalle transaccional. Es decir: el
+descuadre que da nombre al caso lo cubre una **regla de calidad**, no el `CHECK`. Los dos hacen
+falta, y hacen cosas distintas: el `CHECK` evita la clase barata de error al escribir; la regla
+detecta la cara, que es que el estado y el detalle cuenten historias diferentes.
+
+> **Una alternativa que va más lejos y no se evaluó al decidir esto:** hacer `saldo_actual` una
+> columna generada (`GENERATED ALWAYS AS (saldo_anterior + total_consumos + total_cargos -
+> total_pagos) STORED`). Así no se valida que el número esté bien: **es imposible escribirlo mal**.
+> Piénsalo antes de seguir — es una decisión mejor que la que tomó este caso.
 
 ---
 

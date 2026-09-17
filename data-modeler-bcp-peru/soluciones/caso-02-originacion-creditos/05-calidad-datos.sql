@@ -32,8 +32,18 @@ WHERE  sig_desde IS NOT NULL
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Unicidad' AS familia,
-           'Deudor unico por tipo+numero de documento' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: cuotas de credito' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM cronograma_cuota) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Unicidad',
+           'Deudor unico por tipo+numero de documento',
            (SELECT COUNT(*) FROM (SELECT 1 FROM deudor GROUP BY tipo_doc_cod, num_doc HAVING COUNT(*) > 1) t) AS incumple
     UNION ALL
     SELECT 'CAL-02', 'Consistencia', 'Toda solicitud rechazada tiene motivo (y solo ella)',

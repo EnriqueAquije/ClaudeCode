@@ -16,8 +16,18 @@ LIMIT 10;
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Integridad del hash' AS familia,
-           'El hash de cada hub corresponde a su llave de negocio' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: versiones en el satelite de demografia' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM sat_persona_demografia) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Integridad del hash',
+           'El hash de cada hub corresponde a su llave de negocio',
            (SELECT COUNT(*) FROM hub_persona  WHERE persona_hk  <> fn_hash_key(tipo_doc_bk, num_doc_bk))
          + (SELECT COUNT(*) FROM hub_distrito WHERE distrito_hk <> fn_hash_key(ubigeo_bk))
          + (SELECT COUNT(*) FROM hub_producto WHERE producto_hk <> fn_hash_key(producto_bk))

@@ -25,8 +25,18 @@ WHERE  mc.decision = 'REVISION'
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Integridad' AS familia,
-           'Todo registro fuente esta vinculado a un registro maestro' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: registros de los sistemas fuente' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM cliente_fuente) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Integridad',
+           'Todo registro fuente esta vinculado a un registro maestro',
            (SELECT COUNT(*) FROM cliente_fuente f
             WHERE f.num_doc IS NOT NULL
               AND NOT EXISTS (SELECT 1 FROM cliente_xref x

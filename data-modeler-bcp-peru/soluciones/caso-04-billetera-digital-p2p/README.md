@@ -10,7 +10,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 3 000 usuarios, 151 500 transferencias (148 700 confirmadas, 2 800
-rechazadas), 294 400 movimientos, partición `DEFAULT` vacía y **14 reglas de calidad en `OK`**.
+rechazadas), 294 400 movimientos, partición `DEFAULT` vacía y **15 reglas de calidad en `OK`**.
 
 ---
 

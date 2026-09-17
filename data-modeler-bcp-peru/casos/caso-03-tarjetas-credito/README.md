@@ -240,7 +240,7 @@ UPDATE estado_cuenta SET pago_minimo = saldo_actual + 1 WHERE cuenta_tj_id = 1;
 
 ## PASO 8 — Consultas y calidad
 
-Resuelve PN-01 a PN-10 y las 12 reglas CAL. Las tres más instructivas:
+Resuelve PN-01 a PN-10 y las 13 reglas CAL. Las tres más instructivas:
 
 - **CAL-02 (encadenamiento):** usa `LAG(saldo_actual) OVER (PARTITION BY cuenta ORDER BY periodo)`
   y compara contra `saldo_anterior`.

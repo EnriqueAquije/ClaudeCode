@@ -10,7 +10,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 800 clientes, 27 666 operaciones, 59 registros en el RO, **235 alertas**,
-21 casos, 2 ROS y **15 reglas de calidad en `OK`**.
+21 casos, 2 ROS y **16 reglas de calidad en `OK`**.
 
 | Regla | Alertas | Severidad |
 |---|---|---|
@@ -93,8 +93,18 @@ distorsionando la tasa de falsos positivos de ambas reglas.
 
 **Contexto.** RN-13: está prohibido que el cliente o terceros conozcan un ROS.
 
-**Decisión.** `ENABLE ROW LEVEL SECURITY` sobre `ros`, política que solo admite
+**Decisión.** `ENABLE` **y `FORCE`** `ROW LEVEL SECURITY` sobre `ros`, política que solo admite
 `rol_oficial_cumplimiento`, y ausencia deliberada de `GRANT` para `rol_analista_negocio`.
+
+**`FORCE` no es opcional, y omitirlo es el error más común al implementar RLS.** Con `ENABLE` a
+secas, el **dueño** de la tabla se salta todas las políticas. En un banco el dueño del esquema suele
+ser el usuario con el que corre el proceso batch, así que sin `FORCE` el ROS queda legible
+precisamente para la cuenta que más consultas ejecuta. Se comprueba con:
+
+```sql
+SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = 'ros';
+-- Ambas deben ser true. Con la primera en true y la segunda en false, el control NO existe.
+```
 
 **Sustento.**
 
@@ -102,11 +112,17 @@ distorsionando la tasa de falsos positivos de ambas reglas.
 |---|---|
 | Validación en el código | **Sí** |
 | Pantalla oculta | **Sí** |
-| `GRANT` + RLS | **No** |
+| `GRANT` + RLS **sin `FORCE`** | **Sí, si la hace el dueño de la tabla** |
+| `GRANT` + RLS **con `FORCE`** | **No** |
 
-**Consecuencias.** El control es efectivo incluso para quien tenga acceso directo a la base. Se
-complementa con `bitacora_acceso_ros`, porque ante una revisión la pregunta no es quién *debería*
-tener acceso, sino **quién accedió**.
+**Consecuencias.** El control es efectivo incluso para quien tenga acceso directo a la base.
+
+**Lo que este caso NO resuelve, y conviene que sepas:** `bitacora_acceso_ros` modela *cómo* se
+registraría cada consulta, pero **no se alimenta sola**. Un `SELECT` no dispara un trigger, así que
+registrar lecturas exige `pgaudit` o exponer el ROS solo a través de una función `SECURITY DEFINER`
+que escriba la bitácora antes de devolver la fila. Las filas que trae el laboratorio están sembradas
+a mano. Modelar el control y no implementarlo es legítimo en un ejercicio; **darlo por implementado
+sería enseñarte a confiar en algo que no está**.
 
 ---
 

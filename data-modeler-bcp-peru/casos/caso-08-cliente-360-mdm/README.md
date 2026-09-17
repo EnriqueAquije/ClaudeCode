@@ -243,7 +243,7 @@ Resultado esperado:
 
 ---
 
-## PASO 9 — Calidad (15 reglas)
+## PASO 9 — Calidad (16 reglas)
 
 Las decisivas:
 

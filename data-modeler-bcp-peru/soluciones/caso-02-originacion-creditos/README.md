@@ -10,7 +10,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 900 deudores, 1 400 solicitudes, 700 créditos, 20 400 cuotas,
-2 612 clasificaciones mensuales y **11 reglas de calidad en `OK`**.
+2 612 clasificaciones mensuales y **12 reglas de calidad en `OK`**.
 
 ---
 

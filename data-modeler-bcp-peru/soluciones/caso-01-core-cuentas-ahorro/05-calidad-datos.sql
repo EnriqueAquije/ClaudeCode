@@ -75,6 +75,16 @@ WHERE  (es_extorno = TRUE  AND movimiento_extornado_id IS NULL)
 \echo '=============================================================='
 
 WITH resultados AS (
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: movimientos' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM movimiento) AS incumple
+    UNION ALL
     SELECT 'CAL-01' AS regla, 'Unicidad'        AS familia,
            'Cliente unico por tipo+numero de documento' AS descripcion,
            (SELECT COUNT(*) FROM (SELECT 1 FROM cliente GROUP BY tipo_doc_cod, num_doc HAVING COUNT(*) > 1) t) AS incumple

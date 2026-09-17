@@ -11,7 +11,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 
 **Resultado esperado:** 365 días de calendario (248 hábiles, 15 feriados), 1 240 cotizaciones
 publicadas, 1 820 valores vigentes (**580 por arrastre**), 2 190 saldos ME, 728 posiciones diarias
-y **14 reglas de calidad en `OK`**.
+y **15 reglas de calidad en `OK`**.
 
 ---
 
@@ -113,7 +113,7 @@ alguien proponga "simplificar el modelo" dejando una sola columna.
 Reemplaza la serie simulada por la **serie real del BCRP** siguiendo
 [`carga_bcrp_real.sql`](../../casos/caso-06-tipo-cambio-posicion-me/datos/carga_bcrp_real.sql).
 
-**El modelo no debe cambiar ni una línea, y las 14 reglas deben seguir en `OK`.**
+**El modelo no debe cambiar ni una línea, y las 15 reglas deben seguir en `OK`.**
 
 Si el modelo solo funciona con los datos para los que fue escrito, no es un modelo: es un molde.
 

@@ -10,7 +10,7 @@
 | [`02-modelo-logico.md`](02-modelo-logico.md) | Diagrama E-R, verificación de formas normales, diccionario de datos, matriz source-to-target |
 | [`03-modelo-fisico.sql`](03-modelo-fisico.sql) | DDL PostgreSQL ejecutable e idempotente |
 | [`04-consultas-negocio.sql`](04-consultas-negocio.sql) | PN-01 a PN-08 resueltas |
-| [`05-calidad-datos.sql`](05-calidad-datos.sql) | CAL-01 a CAL-09 con resumen OK/FALLA |
+| [`05-calidad-datos.sql`](05-calidad-datos.sql) | CAL-00 a CAL-09 con resumen OK/FALLA |
 | [`mi-solucion/`](mi-solucion/) | Espacio para tu propio desarrollo |
 
 ## Ejecución completa
@@ -23,7 +23,7 @@ psql -d bcp_lab -f 04-consultas-negocio.sql
 psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
-**Resultado esperado:** 500 clientes, 800 cuentas, **27 807** movimientos y las 9 reglas de calidad
+**Resultado esperado:** 500 clientes, 800 cuentas, **27 807** movimientos y las 10 reglas de calidad
 en estado `OK`.
 
 > Las cifras son **exactas**: los datos se generan sin `random()`, así que tu ejecución debe dar

@@ -23,8 +23,8 @@ erDiagram
         DATE         fecha_hasta
     }
     reporte_campo {
-        VARCHAR_20   reporte_cod    PK_FK
-        SMALLINT     version        PK_FK
+        VARCHAR_20   reporte_cod    PK,FK
+        SMALLINT     version        PK,FK
         VARCHAR_40   campo_cod      PK
         SMALLINT     posicion       UK
         VARCHAR_120  campo_nombre
@@ -36,8 +36,8 @@ erDiagram
         VARCHAR_200  base_legal
     }
     reporte_validacion {
-        VARCHAR_20   reporte_cod    PK_FK
-        SMALLINT     version        PK_FK
+        VARCHAR_20   reporte_cod    PK,FK
+        SMALLINT     version        PK,FK
         VARCHAR_20   validacion_cod PK
         VARCHAR_250  descripcion
         VARCHAR_10   severidad
@@ -45,9 +45,9 @@ erDiagram
         VARCHAR_200  base_legal
     }
     reporte_linaje {
-        VARCHAR_20   reporte_cod    PK_FK
-        SMALLINT     version        PK_FK
-        VARCHAR_40   campo_cod      PK_FK
+        VARCHAR_20   reporte_cod    PK,FK
+        SMALLINT     version        PK,FK
+        VARCHAR_40   campo_cod      PK,FK
         VARCHAR_30   esquema_origen
         VARCHAR_60   tabla_origen
         VARCHAR_60   columna_origen
@@ -56,7 +56,7 @@ erDiagram
     }
     reporte_envio {
         BIGINT       envio_id       PK
-        VARCHAR_20   reporte_cod    FK_UK
+        VARCHAR_20   reporte_cod    FK,UK
         SMALLINT     version        FK
         CHAR_6       periodo        UK
         SMALLINT     num_envio      UK
@@ -72,7 +72,7 @@ erDiagram
         VARCHAR_300  observacion_sbs
     }
     reporte_detalle {
-        BIGINT       envio_id       PK_FK
+        BIGINT       envio_id       PK,FK
         INTEGER      num_linea      PK
         CHAR_2       tipo_doc_cod   UK
         VARCHAR_20   num_doc        UK
@@ -97,7 +97,7 @@ erDiagram
         TIMESTAMP    fecha_deteccion
     }
     cuadre_reporte {
-        BIGINT       envio_id       PK_FK
+        BIGINT       envio_id       PK,FK
         VARCHAR_40   concepto       PK
         NUMERIC_18_2 valor_reporte
         NUMERIC_18_2 valor_contable

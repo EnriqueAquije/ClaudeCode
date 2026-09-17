@@ -240,7 +240,7 @@ flowchart LR
 
 ---
 
-## PASO 9 — Calidad (15 reglas)
+## PASO 9 — Calidad (16 reglas)
 
 Las específicas de la metodología:
 

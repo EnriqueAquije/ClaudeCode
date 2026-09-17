@@ -24,7 +24,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | `fact_saldo_captacion_mes` | 3 188 |
 | `fact_colocacion_mes` | 2 612 |
 
-Y **15 reglas de calidad en `OK`**, incluyendo el cuadre exacto contra los sistemas fuente.
+Y **16 reglas de calidad en `OK`**, incluyendo el cuadre exacto contra los sistemas fuente.
 
 ---
 

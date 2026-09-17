@@ -17,8 +17,18 @@ GROUP BY e.periodo, e.num_envio, e.estado;
 \echo '=============================================================='
 
 WITH resultados AS (
-    SELECT 'CAL-01' AS regla, 'Integridad' AS familia,
-           'Todo detalle pertenece a un envio existente' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: lineas de detalle del reporte' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM reporte_detalle) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Integridad',
+           'Todo detalle pertenece a un envio existente',
            (SELECT COUNT(*) FROM reporte_detalle d
             WHERE NOT EXISTS (SELECT 1 FROM reporte_envio e WHERE e.envio_id = d.envio_id)) AS incumple
     UNION ALL

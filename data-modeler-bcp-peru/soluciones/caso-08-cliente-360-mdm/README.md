@@ -20,7 +20,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | Candidatos en revisión manual (homónimos) | 12 |
 | Referencias cruzadas | 5 407 |
 | Trazas de linaje | 15 534 |
-| Reglas de calidad en `OK` | **15 / 15** |
+| Reglas de calidad en `OK` | **16 / 16** |
 
 ---
 

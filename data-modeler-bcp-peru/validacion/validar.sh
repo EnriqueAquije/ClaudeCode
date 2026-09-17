@@ -24,7 +24,13 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SALIDA="${RAIZ}/validacion/salida"
 BD="${PGDATABASE:-bcp_lab}"
 
-mkdir -p "${SALIDA}"
+# El mkdir SE COMPRUEBA: si el repositorio esta montado en solo lectura, sin esto el
+# script sigue adelante y termina culpando al modelo del alumno de un fallo de permisos.
+if ! mkdir -p "${SALIDA}" 2>/dev/null; then
+    echo "No se puede escribir en ${SALIDA}." >&2
+    echo "Revisa los permisos del directorio, o copia el repositorio a una ruta con escritura." >&2
+    exit 3
+fi
 
 # --- Colores (se desactivan si la salida no es una terminal) --------------------------
 if [ -t 1 ]; then
@@ -35,18 +41,22 @@ else
 fi
 
 # --- Catálogo de casos ---------------------------------------------------------------
+#     id | directorio | nombre | dependencias | reglas de calidad esperadas
 #     Orden = orden de dependencia. No se puede alterar.
+#
+#     La ultima columna existe para que "0 reglas OK" NO cuente como caso valido: sin ella,
+#     un fichero de calidad vacio o truncado pasaria la validacion sin evaluar nada.
 CASOS=(
-    "caso01|caso-01-core-cuentas-ahorro|Core bancario: cuentas de ahorro|-"
-    "caso02|caso-02-originacion-creditos|Originación y seguimiento de créditos|-"
-    "caso03|caso-03-tarjetas-credito|Tarjetas de crédito y estados de cuenta|-"
-    "caso04|caso-04-billetera-digital-p2p|Billetera digital y transferencias P2P|-"
-    "caso05|caso-05-dwh-colocaciones|DWH dimensional de colocaciones|caso01,caso02"
-    "caso06|caso-06-tipo-cambio-posicion-me|Tipo de cambio y posición en ME|-"
-    "caso07|caso-07-plaft-monitoreo|PLAFT: monitoreo de operaciones|-"
-    "caso08|caso-08-cliente-360-mdm|Cliente 360 / MDM|caso01,caso02,caso04,caso07"
-    "caso09|caso-09-data-vault-inclusion|Data Vault de inclusión financiera|-"
-    "caso10|caso-10-reporte-regulatorio-sbs|Reporte regulatorio a la SBS|caso02"
+    "caso01|caso-01-core-cuentas-ahorro|Core bancario: cuentas de ahorro|-|10"
+    "caso02|caso-02-originacion-creditos|Originación y seguimiento de créditos|-|12"
+    "caso03|caso-03-tarjetas-credito|Tarjetas de crédito y estados de cuenta|-|13"
+    "caso04|caso-04-billetera-digital-p2p|Billetera digital y transferencias P2P|-|15"
+    "caso05|caso-05-dwh-colocaciones|DWH dimensional de colocaciones|caso01,caso02|16"
+    "caso06|caso-06-tipo-cambio-posicion-me|Tipo de cambio y posición en ME|-|15"
+    "caso07|caso-07-plaft-monitoreo|PLAFT: monitoreo de operaciones|-|16"
+    "caso08|caso-08-cliente-360-mdm|Cliente 360 / MDM|caso01,caso02,caso04,caso07|16"
+    "caso09|caso-09-data-vault-inclusion|Data Vault de inclusión financiera|-|16"
+    "caso10|caso-10-reporte-regulatorio-sbs|Reporte regulatorio a la SBS|caso02|17"
 )
 
 # =====================================================================================
@@ -67,7 +77,7 @@ expandir_dependencias() {
     local fila id deps dep
 
     for fila in "${CASOS[@]}"; do
-        IFS='|' read -r id _ _ deps <<< "${fila}"
+        IFS='|' read -r id _ _ deps _ <<< "${fila}"
         if [ "${id}" = "${objetivo}" ]; then
             if [ "${deps}" != "-" ]; then
                 IFS=',' read -ra ADEPS <<< "${deps}"
@@ -97,19 +107,38 @@ ejecutar_sql() {
 # =====================================================================================
 
 A_EJECUTAR=()
-if [ $# -ge 1 ]; then
+if [ $# -gt 1 ]; then
+    # Un argumento de mas suele ser "validar.sh caso01 caso02": quien lo teclea espera dos
+    # casos y obtendria uno en silencio. Mejor fallar y decirlo.
+    echo "${ROJO}Solo se admite UN caso por ejecución (recibidos: $#).${FIN}"
+    echo "Para varios casos, ejecuta el script una vez por caso, o sin argumentos para los 10."
+    exit 2
+fi
+
+if [ $# -eq 1 ]; then
     SOLICITADO="$1"
-    if ! printf '%s\n' "${CASOS[@]}" | grep -q "^${SOLICITADO}|"; then
+
+    # Comparación EXACTA, no con grep. Con `grep "^${SOLICITADO}|"` un argumento como
+    # 'caso0[12]' o 'caso0.' es una expresión regular que empareja, pasa el filtro, y luego
+    # no coincide con ningún id: la lista queda vacía, no se ejecuta nada y el script
+    # terminaba declarando "todos los escenarios son 100 % desarrollables". Falso verde.
+    CASO_VALIDO=0
+    for fila in "${CASOS[@]}"; do
+        [ "${fila%%|*}" = "${SOLICITADO}" ] && { CASO_VALIDO=1; break; }
+    done
+    if [ "${CASO_VALIDO}" -eq 0 ]; then
         echo "${ROJO}Caso desconocido: ${SOLICITADO}${FIN}"
         echo "Válidos: caso01 … caso10"
         exit 2
     fi
+
     while IFS= read -r c; do
         # sin duplicados, conservando el orden
-        if ! printf '%s\n' "${A_EJECUTAR[@]:-}" | grep -qx "${c}"; then
-            A_EJECUTAR+=("${c}")
-        fi
+        YA=0
+        for v in "${A_EJECUTAR[@]:-}"; do [ "${v}" = "${c}" ] && { YA=1; break; }; done
+        [ "${YA}" -eq 0 ] && A_EJECUTAR+=("${c}")
     done < <(expandir_dependencias "${SOLICITADO}")
+
     echo "${AMAR}Caso solicitado: ${SOLICITADO}${FIN}"
     echo "${AMAR}Se ejecutarán (incluye prerrequisitos): ${A_EJECUTAR[*]}${FIN}"
 else
@@ -118,11 +147,21 @@ else
     done
 fi
 
+# Red de seguridad: si por lo que sea la lista quedó vacía, esto NO es un éxito.
+if [ "${#A_EJECUTAR[@]}" -eq 0 ]; then
+    echo "${ROJO}No hay ningún caso que ejecutar. Abortando sin validar nada.${FIN}"
+    exit 2
+fi
+
 # =====================================================================================
 #  Comprobaciones previas
 # =====================================================================================
 
 titulo "VALIDACIÓN DEL LABORATORIO — data-modeler-bcp-peru"
+echo "${AMAR}Qué valida  : la SOLUCIÓN DE REFERENCIA de cada caso (soluciones/caso-NN/).${FIN}"
+echo "${AMAR}              NO valida lo que hayas escrito en mi-solucion/. Sirve para comprobar${FIN}"
+echo "${AMAR}              que tu entorno funciona y para comparar contra el resultado esperado.${FIN}"
+echo ""
 echo "Base de datos : ${BD}"
 echo "Fecha         : $(date '+%Y-%m-%d %H:%M:%S')"
 echo "Casos         : ${#A_EJECUTAR[@]}"
@@ -154,7 +193,7 @@ for ID in "${A_EJECUTAR[@]}"; do
 
     # datos del caso
     for fila in "${CASOS[@]}"; do
-        IFS='|' read -r cid cdir cnom cdep <<< "${fila}"
+        IFS='|' read -r cid cdir cnom cdep cmin <<< "${fila}"
         [ "${cid}" = "${ID}" ] && break
     done
 
@@ -206,11 +245,20 @@ for ID in "${A_EJECUTAR[@]}"; do
             # terminada en OK o en FALLA. Eso es lo que se cuenta aqui.
             N_OK=$(grep -cE '\| OK *$'    "${LOG_CAL}" || true)
             N_FALLA=$(grep -cE '\| FALLA *$' "${LOG_CAL}" || true)
+            N_TOTAL=$((N_OK + N_FALLA))
             if [ "${N_FALLA}" -gt 0 ]; then
                 echo "${ROJO}${N_FALLA} REGLA(S) EN FALLA${FIN}"
                 grep -E '\| FALLA *$' "${LOG_CAL}" | sed 's/^/      /'
                 ERROR_CASO=1
                 TOTAL_FALLA=$((TOTAL_FALLA + N_FALLA))
+                TOTAL_OK=$((TOTAL_OK + N_OK))
+            elif [ "${N_TOTAL}" -lt "${cmin}" ]; then
+                # "0 reglas OK" NO es un exito: significa que no se evaluo nada. Un fichero
+                # de calidad vacio, truncado o que fallo a medias daria verde sin este control.
+                echo "${ROJO}SOLO ${N_TOTAL} REGLAS EVALUADAS (se esperaban ${cmin})${FIN}"
+                echo "      El fichero de calidad no produjo el resumen completo."
+                echo "      Revisa ${LOG_CAL#${RAIZ}/}"
+                ERROR_CASO=1
             else
                 echo "${VERDE}${N_OK} reglas OK${FIN}"
                 TOTAL_OK=$((TOTAL_OK + N_OK))

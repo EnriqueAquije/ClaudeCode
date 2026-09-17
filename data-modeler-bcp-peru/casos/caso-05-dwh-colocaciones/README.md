@@ -241,7 +241,7 @@ y en monto, para los dos procesos.
 
 ## PASO 8 — Consultas y calidad
 
-Resuelve PN-01 a PN-10 y las 15 reglas CAL. Presta atención especial a:
+Resuelve PN-01 a PN-10 y las 16 reglas CAL. Presta atención especial a:
 
 - **PN-04**: ejecuta las dos variantes y **mide la diferencia**. Ese número es tu argumento cuando
   alguien proponga "simplificar" el SCD2.

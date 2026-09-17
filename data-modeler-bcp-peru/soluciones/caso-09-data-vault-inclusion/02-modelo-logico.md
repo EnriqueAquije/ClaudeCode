@@ -127,9 +127,17 @@ CREATE TABLE sat_persona_ingreso (
 );
 ```
 
-> **`fecha_carga` en la PK es lo que hace el modelo insert-only.** No es una convención: es una
-> restricción estructural. Insertar dos veces la misma versión es imposible, y sobrescribir requiere
-> un `UPDATE` explícito que la metodología prohíbe.
+> **`fecha_carga` en la PK es lo que permite conservar varias versiones de la misma entidad.**
+> Insertar dos veces la versión de una misma fecha es imposible: eso sí lo garantiza la estructura.
+>
+> **Lo que la estructura NO garantiza es el insert-only.** Un `UPDATE` o un `DELETE` sobre un
+> satélite funcionan perfectamente: no hay triggers, ni reglas, ni privilegios revocados que lo
+> impidan. El insert-only es una **disciplina de la metodología**, no una restricción de la base, y
+> confundir ambas cosas es justo el error que este laboratorio intenta enseñarte a no cometer.
+>
+> Si quisieras convertirlo en garantía real, el camino es `REVOKE UPDATE, DELETE ON <satélite>` a
+> todos los roles de carga, más una regla de calidad que verifique esos privilegios en
+> `information_schema.table_privileges`. **Es un buen ejercicio, y no está hecho aquí.**
 
 ---
 

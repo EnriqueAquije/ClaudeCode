@@ -11,11 +11,18 @@
 
 SET search_path TO caso10, public;
 
+-- COMPROBACION DE PRERREQUISITOS
+-- Que la tabla exista NO basta: si esta vacia, el reporte se genera sin deudores y se
+-- remite un archivo vacio dentro del plazo. Para el supervisor eso es peor que un envio
+-- tardio, y ninguna regla de calidad lo detectaria: cero filas son cero incumplimientos.
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables
                    WHERE table_schema = 'caso02' AND table_name = 'deudor_clasificacion_mes')
     THEN RAISE EXCEPTION 'Falta el esquema caso02. Ejecute primero el caso 02 completo.'; END IF;
+
+    IF (SELECT COUNT(*) FROM caso02.deudor_clasificacion_mes) = 0
+    THEN RAISE EXCEPTION 'El esquema caso02 existe pero esta VACIO: no hay deudores que reportar.'; END IF;
 END $$;
 
 TRUNCATE cuadre_reporte, reporte_error, reporte_detalle, reporte_envio,

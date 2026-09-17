@@ -18,7 +18,7 @@
 | **Base de datos** | `bcp_lab` |
 | **Casos ejecutados** | **10 de 10** |
 | **Casos válidos** | **10 de 10** |
-| **Reglas de calidad en `OK`** | **136** |
+| **Reglas de calidad en `OK`** | **146** |
 | **Reglas en `FALLA`** | **0** |
 | **Cifras documentadas verificadas** | **66** |
 | **Cifras que no coinciden** | **0** |
@@ -39,17 +39,17 @@ de calidad**. Basta que una falle para que el caso se marque como fallido.
 
 | Caso | Nombre | DDL | Datos | Consultas | Reglas | Tablas | Vistas | Filas |
 |---|---|:-:|:-:|:-:|---|---:|---:|---:|
-| `caso01` | Core bancario: cuentas de ahorro | ✅ | ✅ | ✅ | **9 / 9** | 12 | 2 | 30 042 |
-| `caso02` | Originación y seguimiento de créditos | ✅ | ✅ | ✅ | **11 / 11** | 16 | 1 | 32 117 |
-| `caso03` | Tarjetas de crédito y estados de cuenta | ✅ | ✅ | ✅ | **12 / 12** | 13 | 1 | 43 380 |
-| `caso04` | Billetera digital y transferencias P2P | ✅ | ✅ | ✅ | **14 / 14** | 19 | 1 | 606 419 |
-| `caso05` | DWH dimensional de colocaciones | ✅ | ✅ | ✅ | **15 / 15** | 9 | 2 | 42 060 |
-| `caso06` | Tipo de cambio y posición en ME | ✅ | ✅ | ✅ | **14 / 14** | 7 | 2 | 6 350 |
-| `caso07` | PLAFT: monitoreo de operaciones | ✅ | ✅ | ✅ | **15 / 15** | 16 | 2 | 29 643 |
-| `caso08` | Cliente 360 / MDM | ✅ | ✅ | ✅ | **15 / 15** | 9 | 1 | 37 190 |
-| `caso09` | Data Vault de inclusión financiera | ✅ | ✅ | ✅ | **15 / 15** | 14 | 2 | 24 424 |
-| `caso10` | Reporte regulatorio a la SBS | ✅ | ✅ | ✅ | **16 / 16** | 8 | 2 | 3 076 |
-| | **Total** | | | | **136** | **123** | **16** | **854 701** |
+| `caso01` | Core bancario: cuentas de ahorro | ✅ | ✅ | ✅ | **10 / 10** | 12 | 2 | 30 042 |
+| `caso02` | Originación y seguimiento de créditos | ✅ | ✅ | ✅ | **12 / 12** | 16 | 1 | 32 117 |
+| `caso03` | Tarjetas de crédito y estados de cuenta | ✅ | ✅ | ✅ | **13 / 13** | 13 | 1 | 43 380 |
+| `caso04` | Billetera digital y transferencias P2P | ✅ | ✅ | ✅ | **15 / 15** | 19 | 1 | 606 419 |
+| `caso05` | DWH dimensional de colocaciones | ✅ | ✅ | ✅ | **16 / 16** | 9 | 2 | 42 060 |
+| `caso06` | Tipo de cambio y posición en ME | ✅ | ✅ | ✅ | **15 / 15** | 7 | 2 | 6 350 |
+| `caso07` | PLAFT: monitoreo de operaciones | ✅ | ✅ | ✅ | **16 / 16** | 16 | 2 | 29 643 |
+| `caso08` | Cliente 360 / MDM | ✅ | ✅ | ✅ | **16 / 16** | 9 | 1 | 37 190 |
+| `caso09` | Data Vault de inclusión financiera | ✅ | ✅ | ✅ | **16 / 16** | 14 | 2 | 24 424 |
+| `caso10` | Reporte regulatorio a la SBS | ✅ | ✅ | ✅ | **17 / 17** | 8 | 2 | 3 076 |
+| | **Total** | | | | **146** | **123** | **16** | **854 701** |
 
 > `caso04` concentra el 71 % de las filas: es la tabla particionada de transferencias, y está así a
 > propósito. Es el único caso donde el volumen es parte de la lección.
@@ -103,7 +103,7 @@ END $$;
 
 ---
 
-## 4. Qué verifican las 136 reglas
+## 4. Qué verifican las 146 reglas
 
 Las reglas no son adorno: cada una defiende una decisión de modelado. Agrupadas por familia:
 
@@ -121,7 +121,8 @@ Las reglas no son adorno: cada una defiende una decisión de modelado. Agrupadas
 | **Historización** | 5 | Que la historia no se solape ni se pierda | SCD-2 sin solapamiento; satélites insert-only |
 | **Razonabilidad** | 4 | Que los valores tengan sentido, no solo que sean válidos | Provisión ≤ saldo; reglas que no alertan a todo el universo |
 | **Matching (MDM)** | 3 | Que la identidad se resuelva de forma determinista | Sin fusiones de homónimos; supervivencia por atributo |
-| | **136** | | |
+| **Volumen** | 10 | Que HAYA datos, no solo que los que hay cumplan | Una por caso: es la única que falla sobre una base vacía |
+| | **146** | | |
 
 **Y dos reglas que validan el diseño en lugar de los datos** (CAL-07 y CAL-08 del `caso09`): consultan
 `information_schema` para verificar que **nadie agregó atributos descriptivos a un hub o a un link**.
@@ -220,7 +221,7 @@ caso10-02-datos.log      caso10-04-calidad.log
 - Los datos de los 10 casos se cargan completos y sin violar ninguna restricción.
 - Las **98 preguntas de negocio** devuelven resultados (PN-01 a PN-10 en cada caso; PN-01 a PN-08
   en el `caso01`).
-- Las 136 reglas de calidad pasan.
+- Las 146 reglas de calidad pasan.
 - Las **66 cifras citadas en los READMEs** coinciden exactamente con lo que la base produce.
 - Los escenarios narrados en los enunciados **ocurren realmente en los datos**: hay deudores que se
   deterioran, hay alertas de PLAFT que se disparan, hay un envío regulatorio que se observa y se

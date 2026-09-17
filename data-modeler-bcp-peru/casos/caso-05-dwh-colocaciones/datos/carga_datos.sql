@@ -31,7 +31,10 @@ BEGIN
         RAISE EXCEPTION 'Falta el esquema caso02. Ejecute primero el caso 02 completo.';
     END IF;
     IF (SELECT COUNT(*) FROM caso01.movimiento) = 0 THEN
-        RAISE EXCEPTION 'El esquema caso01 existe pero esta vacio.';
+        RAISE EXCEPTION 'El esquema caso01 existe pero esta VACIO.';
+    END IF;
+    IF (SELECT COUNT(*) FROM caso02.deudor_clasificacion_mes) = 0 THEN
+        RAISE EXCEPTION 'El esquema caso02 existe pero esta VACIO.';
     END IF;
 END $$;
 

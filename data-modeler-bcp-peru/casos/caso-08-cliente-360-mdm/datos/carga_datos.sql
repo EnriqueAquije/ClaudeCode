@@ -9,6 +9,11 @@
 
 SET search_path TO caso08, public;
 
+-- COMPROBACION DE PRERREQUISITOS
+-- Dos condiciones, no una: que el esquema EXISTA y que TENGA DATOS.
+-- Comprobar solo la existencia de la tabla es el error clasico, y es peor que no comprobar
+-- nada: un MDM que arranca sobre fuentes vacias termina con 0 golden records, sin un solo
+-- error, y con todas sus reglas de calidad en verde. Nadie se entera de que esta vacio.
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='caso01' AND table_name='cliente')
@@ -19,6 +24,15 @@ BEGIN
     THEN RAISE EXCEPTION 'Falta el esquema caso04. Ejecute primero el caso 04.'; END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='caso07' AND table_name='cliente')
     THEN RAISE EXCEPTION 'Falta el esquema caso07. Ejecute primero el caso 07.'; END IF;
+
+    IF (SELECT COUNT(*) FROM caso01.cliente) = 0
+    THEN RAISE EXCEPTION 'El esquema caso01 existe pero esta VACIO. Cargue sus datos antes de continuar.'; END IF;
+    IF (SELECT COUNT(*) FROM caso02.deudor) = 0
+    THEN RAISE EXCEPTION 'El esquema caso02 existe pero esta VACIO. Cargue sus datos antes de continuar.'; END IF;
+    IF (SELECT COUNT(*) FROM caso04.usuario_billetera) = 0
+    THEN RAISE EXCEPTION 'El esquema caso04 existe pero esta VACIO. Cargue sus datos antes de continuar.'; END IF;
+    IF (SELECT COUNT(*) FROM caso07.cliente) = 0
+    THEN RAISE EXCEPTION 'El esquema caso07 existe pero esta VACIO. Cargue sus datos antes de continuar.'; END IF;
 END $$;
 
 TRUNCATE cliente_xref, cliente_maestro_linaje, cliente_maestro, match_candidato,
@@ -99,7 +113,16 @@ SELECT  'CRM',
         SUBSTRING(c.num_doc, 1, LENGTH(c.num_doc) - 2)
             || SUBSTRING(c.num_doc, LENGTH(c.num_doc), 1)
             || SUBSTRING(c.num_doc, LENGTH(c.num_doc) - 1, 1),
-        c.ape_paterno, c.ape_materno, c.nombres, c.fecha_nacimiento,
+        -- TILDES: el core es un sistema legado que guarda ASCII; el CRM es moderno y
+        -- guarda el apellido como se escribe de verdad. Es el escenario mas comun en un
+        -- banco peruano, y el que rompe el matching por nombre si la normalizacion no
+        -- quita las tildes. Con nombre_normalizado bien construido, HUAMAN y HUAMAN con
+        -- tilde producen la MISMA clave y el par se une igual.
+        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(c.ape_paterno,
+            'PEREZ','PÉREZ'), 'HUAMAN','HUAMÁN'), 'VASQUEZ','VÁSQUEZ'),
+            'CHAVEZ','CHÁVEZ'), 'SANCHEZ','SÁNCHEZ'), 'LOPEZ','LÓPEZ'),
+            'RAMIREZ','RAMÍREZ'),
+        c.ape_materno, c.nombres, c.fecha_nacimiento,
         'AV. PRINCIPAL ' || (100 + c.cliente_id % 900) || ' - LIMA',
         '9' || LPAD((40000000 + c.cliente_id * 13)::TEXT, 8, '0'),
         LOWER(c.nombres) || LOWER(c.ape_paterno) || '@empresa.com.pe',

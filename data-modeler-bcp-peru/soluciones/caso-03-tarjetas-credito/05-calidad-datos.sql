@@ -29,8 +29,18 @@ WITH consumo_trx AS (
 ),
 consumo AS (SELECT cuenta_tj_id, periodo, SUM(monto) AS monto FROM consumo_trx GROUP BY 1, 2),
 resultados AS (
-    SELECT 'CAL-01' AS regla, 'Cuadre' AS familia,
-           'Estado de cuenta: saldo_actual = anterior + consumos + cargos - pagos' AS descripcion,
+    -- CAL-00 es una regla de VOLUMEN, y es distinta de todas las demas.
+    -- Las otras cuentan filas que INCUMPLEN: sobre una base vacia dan cero, es decir OK.
+    -- Por eso un laboratorio sin datos pasaba el control de calidad entero. Esta regla
+    -- comprueba lo contrario: que HAYA datos. Es el incidente mas frecuente en produccion
+    -- -- el proceso no cargo nada -- y el unico que una suite de "contar violaciones"
+    -- no puede ver nunca.
+    SELECT 'CAL-00' AS regla, 'Volumen' AS familia,
+           'Hay datos cargados: transacciones de tarjeta' AS descripcion,
+           (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM transaccion) AS incumple
+    UNION ALL
+    SELECT 'CAL-01', 'Cuadre',
+           'Estado de cuenta: saldo_actual = anterior + consumos + cargos - pagos',
            (SELECT COUNT(*) FROM estado_cuenta
             WHERE saldo_actual <> saldo_anterior + total_consumos + total_cargos - total_pagos) AS incumple
     UNION ALL

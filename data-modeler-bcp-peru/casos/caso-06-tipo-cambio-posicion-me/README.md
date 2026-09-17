@@ -228,7 +228,7 @@ curl -o tc_bcrp.csv \
 Luego sigue [`datos/carga_bcrp_real.sql`](datos/carga_bcrp_real.sql), que incluye el área de
 staging, la función de conversión de fechas del formato del BCRP y la carga.
 
-**La prueba de fuego del modelo:** cámbiale la fuente de datos y **las 14 reglas de calidad deben
+**La prueba de fuego del modelo:** cámbiale la fuente de datos y **las 15 reglas de calidad deben
 seguir en `OK`**. Si el modelo solo funciona con los datos que tú generaste, no es un modelo: es un
 molde para tus datos.
 

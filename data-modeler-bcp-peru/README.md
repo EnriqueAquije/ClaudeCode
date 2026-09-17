@@ -14,7 +14,7 @@ físico → consultas → validación de calidad).
 >
 > | Casos válidos | Reglas de calidad en `OK` | Reglas en `FALLA` | Cifras verificadas | Filas cargadas |
 > |:-:|:-:|:-:|:-:|:-:|
-> | **10 / 10** | **136** | **0** | **66** | **854 701** |
+> | **10 / 10** | **146** | **0** | **66** | **854 701** |
 >
 > Las *cifras verificadas* son las que los READMEs prometen ("900 deudores, 195 duplicados
 > resueltos…"): el validador comprueba que la base las cumpla, no solo que los scripts corran.
@@ -343,7 +343,7 @@ psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/04-consultas-negocio.s
 ```
 
 El script devuelve **código de salida 0** si todos los modelos se crean, todos los datos cargan,
-todas las consultas responden, **todas las reglas de calidad quedan en `OK`** y **las 66 cifras que
+todas las consultas responden, **las 146 reglas de calidad quedan en `OK`** y **las 66 cifras que
 los READMEs prometen coinciden con la base**. Si algo falla, imprime la regla exacta y deja el
 registro en `validacion/salida/`.
 

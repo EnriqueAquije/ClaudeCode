@@ -177,11 +177,11 @@ erDiagram
 | RN-02 cliente 0..N cuentas | FK en `cuenta_titular` | Declarativo |
 | RN-03 un solo titular vigente | `uq_cuenta_titular_principal` (índice único parcial) | Declarativo |
 | RN-04 producto define moneda | `producto.moneda_cod` + CAL-07 | Mixto |
-| RN-05 cuenta monomoneda | `cuenta.moneda_cod NOT NULL` | Declarativo |
+| RN-05 cuenta monomoneda | `cuenta.moneda_cod NOT NULL` + CAL-07 | **Mixto** — ver nota |
 | RN-06 estados | FK `cat_estado_cuenta` | Declarativo |
 | RN-07 dos fechas | `ck_movimiento_fechas` | Declarativo |
 | RN-08 canal obligatorio | FK `cat_canal` NOT NULL | Declarativo |
-| RN-09 signo por tipo | `cat_tipo_movimiento.signo` + `ck_movimiento_signo` | Declarativo |
+| RN-09 signo por tipo | `ck_movimiento_signo` (solo la magnitud) | **NO DECLARADA** — ver nota |
 | RN-10 saldo = Σ movimientos | CAL-04 | **Regla de calidad** |
 | RN-11 disponible derivado | Columna `GENERATED ALWAYS AS ... STORED` | Declarativo |
 | RN-12 extorno sin borrado | FK reflexiva + `ck_movimiento_extorno` | Declarativo |
@@ -189,9 +189,48 @@ erDiagram
 | RN-14 saldo negativo solo en corriente | `producto.permite_saldo_negativo` + CAL-05 | **Regla de calidad** |
 | RN-15 oficina con ubigeo | FK `cat_ubigeo` | Declarativo |
 
-> **Lección del caso:** 13 de 15 reglas se pueden declarar en la base. Solo el cuadre de saldos y la
-> regla de saldo negativo requieren verificación por proceso, porque dependen de agregaciones.
-> **Cuanto más alto el porcentaje de reglas declarativas, más sano el modelo.**
+> **Lección del caso:** 11 de 15 reglas se declaran de verdad en la base. Dos requieren
+> verificación por proceso porque dependen de agregaciones (RN-10, RN-14), una es mixta (RN-05) y
+> **una no está garantizada por nada (RN-09)**.
+> **Cuanto más alto el porcentaje de reglas declarativas, más sano el modelo — pero solo si el
+> recuento es honesto.** Contar como "declarativa" una regla que el esquema no impone es peor que
+> no tener la tabla: te deja tranquilo sobre un hueco abierto.
+
+### Las dos filas que hay que mirar dos veces
+
+**RN-09 (signo) NO está garantizada.** `ck_movimiento_signo` solo verifica
+`ABS(monto_con_signo) = monto`, es decir la **magnitud**. El **sentido** no se contrasta contra
+`cat_tipo_movimiento.signo`, así que un depósito guardado con signo negativo —un retiro
+contabilizado al revés— entra sin resistencia y ninguna regla de calidad lo ve. Compruébalo:
+
+```sql
+-- Un deposito (signo +1 en el catalogo) guardado como si fuera un retiro. Entra sin error.
+BEGIN;
+INSERT INTO movimiento (cuenta_id, num_operacion, tipo_mov_cod, canal_cod,
+       fecha_operacion, fecha_contable, monto, monto_con_signo, saldo_posterior, moneda_cod)
+VALUES (1, 'PRUEBA-SIGNO', 'DEP', 'APP', DATE '2026-09-01', DATE '2026-09-01',
+        100.00, -100.00, 0.00, 'PEN');
+ROLLBACK;   -- probado en transaccion, para no ensuciar el laboratorio
+```
+
+**Ejercicio (y es de los buenos):** escribe la regla que lo detecta, y después decide si debería ser
+una regla o una restricción. La regla es directa:
+
+```sql
+SELECT m.movimiento_id, m.tipo_mov_cod, tm.signo, m.monto, m.monto_con_signo
+FROM   movimiento m
+JOIN   cat_tipo_movimiento tm ON tm.tipo_mov_cod = m.tipo_mov_cod
+WHERE  m.monto_con_signo <> m.monto * tm.signo;
+```
+
+Declararlo es más difícil: un `CHECK` no puede consultar otra tabla. Las salidas son replicar
+`signo` en `movimiento` con una FK compuesta `(tipo_mov_cod, signo)` y entonces sí
+`CHECK (monto_con_signo = monto * signo)`, o no guardar `monto_con_signo` en absoluto y derivarlo en
+una vista. **Ese dilema —replicar un dato para poder declarar una regla— es el oficio.**
+
+**RN-05 (cuenta monomoneda) es mixta, no declarativa.** `NOT NULL` obliga a que la cuenta tenga
+moneda; no impide que llegue un movimiento en otra. Eso lo cubre CAL-07, que es una regla de
+calidad.
 
 ---
 
