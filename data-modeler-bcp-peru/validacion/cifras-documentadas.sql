@@ -32,7 +32,7 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     UNION ALL
     SELECT 'DOC-0204','caso02','cuotas = 20400',                  20400, (SELECT COUNT(*) FROM caso02.cronograma_cuota)
     UNION ALL
-    SELECT 'DOC-0205','caso02','clasificaciones mensuales = 2612', 2612, (SELECT COUNT(*) FROM caso02.deudor_clasificacion_mes)
+    SELECT 'DOC-0205','caso02','snapshot mensual (deudor x tipo x moneda) = 2795', 2795, (SELECT COUNT(*) FROM caso02.deudor_clasificacion_mes)
     -- ---------------------------------------------------------------- caso 03
     UNION ALL
     SELECT 'DOC-0301','caso03','titulares = 350',                   350, (SELECT COUNT(*) FROM caso03.titular)
@@ -73,7 +73,7 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     UNION ALL
     SELECT 'DOC-0505','caso05','fact_saldo_captacion_mes = 3188',  3188, (SELECT COUNT(*) FROM caso05.fact_saldo_captacion_mes)
     UNION ALL
-    SELECT 'DOC-0506','caso05','fact_colocacion_mes = 2612',       2612, (SELECT COUNT(*) FROM caso05.fact_colocacion_mes)
+    SELECT 'DOC-0506','caso05','fact_colocacion_mes = 2795',       2795, (SELECT COUNT(*) FROM caso05.fact_colocacion_mes)
     -- ---------------------------------------------------------------- caso 06
     UNION ALL
     SELECT 'DOC-0601','caso06','dias de calendario = 365',          365, (SELECT COUNT(*) FROM caso06.cat_calendario)
@@ -114,15 +114,15 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     UNION ALL
     SELECT 'DOC-0801','caso08','registros en los 6 sistemas = 5407', 5407, (SELECT COUNT(*) FROM caso08.cliente_fuente)
     UNION ALL
-    SELECT 'DOC-0802','caso08','clientes maestros = 5212',          5212, (SELECT COUNT(*) FROM caso08.cliente_maestro)
+    SELECT 'DOC-0802','caso08','clientes maestros = 4592',          4592, (SELECT COUNT(*) FROM caso08.cliente_maestro)
     UNION ALL
-    SELECT 'DOC-0803','caso08','duplicados resueltos = 195',         195, (SELECT COUNT(*) FROM caso08.match_candidato WHERE decision = 'AUTO_MATCH')
+    SELECT 'DOC-0803','caso08','duplicados resueltos = 953',         953, (SELECT COUNT(*) FROM caso08.match_candidato WHERE decision = 'AUTO_MATCH')
     UNION ALL
     SELECT 'DOC-0804','caso08','homonimos en revision manual = 12',   12, (SELECT COUNT(*) FROM caso08.match_candidato WHERE decision = 'REVISION')
     UNION ALL
     SELECT 'DOC-0805','caso08','referencias cruzadas = 5407',       5407, (SELECT COUNT(*) FROM caso08.cliente_xref)
     UNION ALL
-    SELECT 'DOC-0806','caso08','trazas de linaje = 15534',         15534, (SELECT COUNT(*) FROM caso08.cliente_maestro_linaje)
+    SELECT 'DOC-0806','caso08','trazas de linaje = 14082',         14082, (SELECT COUNT(*) FROM caso08.cliente_maestro_linaje)
     -- ---------------------------------------------------------------- caso 09
     UNION ALL
     SELECT 'DOC-0901','caso09','hub_persona = 1600',               1600, (SELECT COUNT(*) FROM caso09.hub_persona)
@@ -143,24 +143,53 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     UNION ALL
     SELECT 'DOC-1002','caso10','campos (v1 + v2) = 21',               21, (SELECT COUNT(*) FROM caso10.reporte_campo)
     UNION ALL
-    SELECT 'DOC-1003','caso10','validaciones = 6',                     6, (SELECT COUNT(*) FROM caso10.reporte_validacion)
+    SELECT 'DOC-1003','caso10','validaciones (v1 + v2) = 12',         12, (SELECT COUNT(*) FROM caso10.reporte_validacion)
     UNION ALL
-    SELECT 'DOC-1004','caso10','linaje de la version vigente = 11',   11, (SELECT COUNT(*) FROM caso10.reporte_linaje)
+    SELECT 'DOC-1004','caso10','linaje (v1 + v2) = 21',               21, (SELECT COUNT(*) FROM caso10.reporte_linaje)
     UNION ALL
     SELECT 'DOC-1005','caso10','envios = 8',                           8, (SELECT COUNT(*) FROM caso10.reporte_envio)
     UNION ALL
-    SELECT 'DOC-1006','caso10','detalle del reporte = 3001',        3001, (SELECT COUNT(*) FROM caso10.reporte_detalle)
+    SELECT 'DOC-1006','caso10','detalle del reporte = 3212',        3212, (SELECT COUNT(*) FROM caso10.reporte_detalle)
     UNION ALL
-    SELECT 'DOC-1007','caso10','hallazgos de junio = 12',             12, (SELECT COUNT(*) FROM caso10.reporte_error)
+    SELECT 'DOC-1007','caso10','hallazgos de junio = 20',             20, (SELECT COUNT(*) FROM caso10.reporte_error)
     UNION ALL
     SELECT 'DOC-1008','caso10','filas de cuadre = 15',                15, (SELECT COUNT(*) FROM caso10.cuadre_reporte)
     UNION ALL
-    SELECT 'DOC-1009','caso10','registros del envio de junio = 389',  389, (SELECT cant_registros FROM caso10.reporte_envio
+    SELECT 'DOC-1009','caso10','registros del envio de junio = 417',  417, (SELECT cant_registros FROM caso10.reporte_envio
                                                                             WHERE periodo = '202606' AND num_envio = 1)
+    UNION ALL
+    -- Que el MDM tenga algo que consolidar: clientes presentes en 3 o mas sistemas.
+    -- Antes era 0, porque cada sistema usaba su propio rango de documentos.
+    SELECT 'DOC-0807','caso08','clientes en 3 o mas sistemas = 212',
+           212, (SELECT COUNT(*) FROM caso08.cliente_maestro WHERE cant_fuentes >= 3)
+    UNION ALL
+    -- Que la red de contactos exista: pares origen-destino con 3+ transferencias.
+    -- Antes era 0, porque ningun par se repetia nunca.
+    SELECT 'DOC-0407','caso04','pares con 3 o mas transferencias = 14962',
+           14962, (SELECT COUNT(*) FROM (SELECT usuario_origen_id, usuario_destino_id
+                                         FROM caso04.transferencia WHERE estado_cod='CONFIRMADA'
+                                         GROUP BY 1,2 HAVING COUNT(*) >= 3) x)
+    UNION ALL
+    -- EL GRANO. Estas tres cifras son la prueba de que el modelo admite lo que la realidad
+    -- entrega: deudores con mas de un tipo de credito vivo. Con el grano anterior la primera
+    -- era imposible de representar y las otras dos no existian.
+    SELECT 'DOC-0206','caso02','deudores con >1 tipo de credito vivo = 37',
+           37, (SELECT COUNT(*) FROM (SELECT deudor_id FROM caso02.credito
+                                      WHERE estado_credito = 'VIGENTE'
+                                      GROUP BY 1 HAVING COUNT(DISTINCT tipo_credito_cod) > 1) x)
+    UNION ALL
+    SELECT 'DOC-0207','caso02','filas que EMPEORAN por alineamiento (RN-06) = 172',
+           172, (SELECT COUNT(*) FROM caso02.deudor_clasificacion_mes
+                 WHERE clasificacion_cod <> clasificacion_propia_cod)
+    UNION ALL
+    SELECT 'DOC-0208','caso02','deudor-periodo con mas de una linea = 183',
+           183, (SELECT COUNT(*) FROM (SELECT deudor_id, periodo
+                                       FROM caso02.deudor_clasificacion_mes
+                                       GROUP BY 1,2 HAVING COUNT(*) > 1) x)
     UNION ALL
     -- El rectificatorio tiene la MISMA cantidad de registros que el original:
     -- se regenero desde el origen, no se recorto el archivo observado.
-    SELECT 'DOC-1010','caso10','registros del rectificatorio = 389',  389, (SELECT cant_registros FROM caso10.reporte_envio
+    SELECT 'DOC-1010','caso10','registros del rectificatorio = 417',  417, (SELECT cant_registros FROM caso10.reporte_envio
                                                                             WHERE periodo = '202606' AND num_envio = 2)
 )
 SELECT  regla,

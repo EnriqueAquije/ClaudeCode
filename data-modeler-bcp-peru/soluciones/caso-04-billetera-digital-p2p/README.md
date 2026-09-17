@@ -12,6 +12,19 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 **Resultado esperado:** 3 000 usuarios, 151 500 transferencias (148 700 confirmadas, 2 800
 rechazadas), 294 400 movimientos, partición `DEFAULT` vacía y **15 reglas de calidad en `OK`**.
 
+**Y dos patrones que los datos reproducen a propósito**, porque sin ellos dos preguntas de negocio
+no tendrían respuesta:
+
+| Patrón | Cifra | Qué habilita |
+|---|---:|---|
+| Pares origen-destino con 3 o más transferencias | **14 962** | PN-06, la red de contactos |
+| Días en que un usuario excede el límite diario | **182** | PN-07, el control de límites |
+
+> **El segundo es el interesante.** Cada una de esas operaciones está **por debajo** del límite por
+> operación: individualmente todas son legales. Lo que se excede es la **suma del día**. Un control
+> que mira operación por operación no ve nada; hay que acumular por usuario y por día. Es el mismo
+> razonamiento del fraccionamiento del caso 07, en pequeño.
+
 ---
 
 ## Registro de decisiones (ADR)

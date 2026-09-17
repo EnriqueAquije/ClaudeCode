@@ -48,15 +48,15 @@ fi
 #     un fichero de calidad vacio o truncado pasaria la validacion sin evaluar nada.
 CASOS=(
     "caso01|caso-01-core-cuentas-ahorro|Core bancario: cuentas de ahorro|-|10"
-    "caso02|caso-02-originacion-creditos|Originación y seguimiento de créditos|-|12"
+    "caso02|caso-02-originacion-creditos|Originación y seguimiento de créditos|-|14"
     "caso03|caso-03-tarjetas-credito|Tarjetas de crédito y estados de cuenta|-|13"
     "caso04|caso-04-billetera-digital-p2p|Billetera digital y transferencias P2P|-|15"
-    "caso05|caso-05-dwh-colocaciones|DWH dimensional de colocaciones|caso01,caso02|16"
+    "caso05|caso-05-dwh-colocaciones|DWH dimensional de colocaciones|caso01,caso02|17"
     "caso06|caso-06-tipo-cambio-posicion-me|Tipo de cambio y posición en ME|-|15"
     "caso07|caso-07-plaft-monitoreo|PLAFT: monitoreo de operaciones|-|16"
     "caso08|caso-08-cliente-360-mdm|Cliente 360 / MDM|caso01,caso02,caso04,caso07|16"
     "caso09|caso-09-data-vault-inclusion|Data Vault de inclusión financiera|-|16"
-    "caso10|caso-10-reporte-regulatorio-sbs|Reporte regulatorio a la SBS|caso02|17"
+    "caso10|caso-10-reporte-regulatorio-sbs|Reporte regulatorio a la SBS|caso02|19"
 )
 
 # =====================================================================================

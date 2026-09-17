@@ -222,12 +222,13 @@ Resultado esperado:
 | Concepto | Valor |
 |---|---|
 | Registros en los 6 sistemas | 5 407 |
-| **Clientes reales** | **5 212** |
+| **Clientes reales** | **4 592** |
 | Duplicados resueltos | 195 |
 | Candidatos a revisión manual (homónimos) | 12 |
 | Trazas de linaje | 15 534 |
 
-**El cuadre:** `5 407 − 195 = 5 212`. Si no cuadra, el proceso perdió o duplicó registros.
+**El cuadre:** `5 407 − 815 = 4 592`, donde 815 son los registros absorbidos por una fusión.
+Si no cuadra, el proceso perdió o duplicó registros.
 
 ---
 

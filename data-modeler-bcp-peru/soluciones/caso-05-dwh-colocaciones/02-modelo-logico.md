@@ -97,8 +97,9 @@ erDiagram
     fact_colocacion_mes {
         INTEGER tiempo_sk PK,FK
         BIGINT  deudor_id_origen PK "dim degenerada"
+        INTEGER producto_sk PK,FK
+        CHAR    moneda_cod PK
         BIGINT  cliente_sk FK
-        INTEGER producto_sk FK
         CHAR    clasificacion_cod
         INTEGER dias_atraso "NO aditiva"
         NUMERIC saldo_capital "SEMIADITIVA"
@@ -165,7 +166,17 @@ erDiagram
 | `fact_movimiento` | `tiempo_sk` | `caso01.movimiento` | `fecha_contable` | `TO_CHAR(fecha,'YYYYMMDD')::INTEGER` | CAL-05 |
 | `fact_saldo_captacion_mes` | `saldo_fin_mes` | `caso01.movimiento` | `saldo_posterior` | `DISTINCT ON` del último movimiento del mes | CAL-09 |
 | `fact_saldo_captacion_mes` | `saldo_promedio` | `caso01.movimiento` | `saldo_posterior` | `AVG()` por cuenta-mes | — |
-| `fact_colocacion_mes` | todo | `caso02.deudor_clasificacion_mes` | directo | Sustitución de claves naturales por SK | CAL-07 |
+| `fact_colocacion_mes` | todo | `caso02.deudor_clasificacion_mes` | directo, **al mismo grano** | Sustitución de claves naturales por SK | CAL-07, **CAL-16** |
+
+> **El grano del hecho es el del origen: mes × deudor × producto × moneda.** La primera versión
+> declaraba la PK en `(tiempo_sk, deudor_id_origen)` **y tenía `producto_sk` en la fila**: la
+> contradicción clásica. Si el producto está en la fila, pertenece al grano; si no, la carga tiene
+> que elegir uno y perder los demás.
+>
+> Lo bueno de este error es cómo avisa: **la carga falla con clave duplicada** en cuanto el origen
+> entrega la realidad completa. Lo malo es que si alguien lo "arregla" agrupando en el `SELECT`,
+> el error se vuelve silencioso y el DWH reporta menos colocación de la que hay. Por eso **CAL-16**
+> compara el número de filas del hecho contra el del origen: un grano colapsado deja de cuadrar.
 
 ### La transformación crítica
 

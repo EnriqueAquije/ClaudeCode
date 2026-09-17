@@ -183,13 +183,19 @@ CREATE TABLE fact_colocacion_mes (
     cliente_sk        BIGINT        NOT NULL,
     producto_sk       INTEGER       NOT NULL,
     deudor_id_origen  BIGINT        NOT NULL,
+    moneda_cod        CHAR(3)       NOT NULL,
     clasificacion_cod CHAR(1)       NOT NULL,
     dias_atraso       INTEGER       NOT NULL,
     -- Medidas
     saldo_capital     NUMERIC(18,2) NOT NULL,
     monto_provision   NUMERIC(18,2) NOT NULL,
     cant_creditos     INTEGER       NOT NULL DEFAULT 1,
-    CONSTRAINT pk_fact_colocacion       PRIMARY KEY (tiempo_sk, deudor_id_origen),
+    -- GRANO DECLARADO: un mes, un deudor, UN PRODUCTO y UNA MONEDA.
+    -- El grano anterior era (tiempo_sk, deudor_id_origen) y tenia `producto_sk` en la fila:
+    -- la contradiccion clasica. Si el producto esta en la fila, tiene que estar en el grano;
+    -- si no, la carga tiene que elegir uno y perder los demas. El sintoma aparece como un
+    -- error de clave duplicada en cuanto el origen entrega la realidad completa.
+    CONSTRAINT pk_fact_colocacion       PRIMARY KEY (tiempo_sk, deudor_id_origen, producto_sk, moneda_cod),
     CONSTRAINT fk_fact_coloc_tiempo     FOREIGN KEY (tiempo_sk)   REFERENCES dim_tiempo (tiempo_sk),
     CONSTRAINT fk_fact_coloc_cliente    FOREIGN KEY (cliente_sk)  REFERENCES dim_cliente (cliente_sk),
     CONSTRAINT fk_fact_coloc_producto   FOREIGN KEY (producto_sk) REFERENCES dim_producto (producto_sk),

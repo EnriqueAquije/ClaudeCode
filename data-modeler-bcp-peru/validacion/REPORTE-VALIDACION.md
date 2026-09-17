@@ -18,9 +18,9 @@
 | **Base de datos** | `bcp_lab` |
 | **Casos ejecutados** | **10 de 10** |
 | **Casos válidos** | **10 de 10** |
-| **Reglas de calidad en `OK`** | **146** |
+| **Reglas de calidad en `OK`** | **151** |
 | **Reglas en `FALLA`** | **0** |
-| **Cifras documentadas verificadas** | **66** |
+| **Cifras documentadas verificadas** | **71** |
 | **Cifras que no coinciden** | **0** |
 | **Errores de PostgreSQL** | **0** |
 | **Tiempo total** | 31 segundos |
@@ -49,7 +49,7 @@ de calidad**. Basta que una falle para que el caso se marque como fallido.
 | `caso08` | Cliente 360 / MDM | ✅ | ✅ | ✅ | **16 / 16** | 9 | 1 | 37 190 |
 | `caso09` | Data Vault de inclusión financiera | ✅ | ✅ | ✅ | **16 / 16** | 14 | 2 | 24 424 |
 | `caso10` | Reporte regulatorio a la SBS | ✅ | ✅ | ✅ | **17 / 17** | 8 | 2 | 3 076 |
-| | **Total** | | | | **146** | **123** | **16** | **854 701** |
+| | **Total** | | | | **151** | **123** | **16** | **848 188** |
 
 > `caso04` concentra el 71 % de las filas: es la tabla particionada de transferencias, y está así a
 > propósito. Es el único caso donde el volumen es parte de la lección.
@@ -103,7 +103,7 @@ END $$;
 
 ---
 
-## 4. Qué verifican las 146 reglas
+## 4. Qué verifican las 151 reglas
 
 Las reglas no son adorno: cada una defiende una decisión de modelado. Agrupadas por familia:
 
@@ -122,7 +122,7 @@ Las reglas no son adorno: cada una defiende una decisión de modelado. Agrupadas
 | **Razonabilidad** | 4 | Que los valores tengan sentido, no solo que sean válidos | Provisión ≤ saldo; reglas que no alertan a todo el universo |
 | **Matching (MDM)** | 3 | Que la identidad se resuelva de forma determinista | Sin fusiones de homónimos; supervivencia por atributo |
 | **Volumen** | 10 | Que HAYA datos, no solo que los que hay cumplan | Una por caso: es la única que falla sobre una base vacía |
-| | **146** | | |
+| | **151** | | |
 
 **Y dos reglas que validan el diseño en lugar de los datos** (CAL-07 y CAL-08 del `caso09`): consultan
 `information_schema` para verificar que **nadie agregó atributos descriptivos a un hub o a un link**.
@@ -144,7 +144,7 @@ las 66 cifras que los READMEs citan:
 ----------+---------+------------------------------------+-------------+------------+------------+--------
  DOC-0803 | caso08  | duplicados resueltos = 195         |         195 |        195 |          0 | OK
  DOC-0906 | caso09  | sat_persona_canal_digital = 1600   |        1600 |       1600 |          0 | OK
- DOC-1010 | caso10  | registros del rectificatorio = 389 |         389 |        389 |          0 | OK
+ DOC-1010 | caso10  | registros del rectificatorio = 417 |         417 |        417 |          0 | OK
 ```
 
 Se ejecuta como etapa final de `validar.sh`, y **se comprobó que falla cuando debe**: al borrar tres
@@ -221,7 +221,7 @@ caso10-02-datos.log      caso10-04-calidad.log
 - Los datos de los 10 casos se cargan completos y sin violar ninguna restricción.
 - Las **98 preguntas de negocio** devuelven resultados (PN-01 a PN-10 en cada caso; PN-01 a PN-08
   en el `caso01`).
-- Las 146 reglas de calidad pasan.
+- Las 151 reglas de calidad pasan.
 - Las **66 cifras citadas en los READMEs** coinciden exactamente con lo que la base produce.
 - Los escenarios narrados en los enunciados **ocurren realmente en los datos**: hay deudores que se
   deterioran, hay alertas de PLAFT que se disparan, hay un envío regulatorio que se observa y se
@@ -245,7 +245,7 @@ Ningún script usa `random()`. Todos los datos se generan con expresiones determ
 que ejecuten el laboratorio en máquinas distintas obtienen **exactamente las mismas filas**, y por
 lo tanto los mismos resultados en las consultas de negocio.
 
-Eso es lo que permite que este documento afirme "389 registros en el envío de junio" o "195
+Eso es lo que permite que este documento afirme "417 registros en el envío de junio" o "953
 duplicados resueltos" y que el lector pueda comprobarlo.
 
 > **Es también una buena práctica de ingeniería de datos, no solo del laboratorio.** Un juego de

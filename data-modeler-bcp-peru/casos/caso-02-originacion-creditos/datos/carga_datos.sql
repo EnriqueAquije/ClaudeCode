@@ -294,31 +294,38 @@ CROSS JOIN LATERAL (
 --    función parametrizada fn_clasificar(). Lo mismo con la provisión.
 -- =====================================================================================
 
-INSERT INTO deudor_clasificacion_mes (deudor_id, periodo, fecha_corte, tipo_credito_cod,
-                                      dias_atraso, clasificacion_cod, saldo_capital,
-                                      tiene_garantia, tasa_provision, monto_provision)
-SELECT  x.deudor_id,
-        x.periodo,
-        x.fecha_corte,
-        x.tipo_credito_cod,
-        x.dias_atraso,
-        fn_clasificar(x.tipo_credito_cod, x.dias_atraso, x.fecha_corte),
-        x.saldo_capital,
-        x.tiene_garantia,
-        pp.tasa_provision,
-        ROUND(x.saldo_capital * pp.tasa_provision, 2)
-FROM (
+-- El GRANO es (deudor, periodo, tipo de credito, moneda). Un deudor con credito de consumo
+-- y credito hipotecario produce DOS filas por periodo, no una.
+--
+-- Y sobre esas filas se aplica el ALINEAMIENTO (RN-06): la clasificacion que se reporta y
+-- con la que se provisiona es la PEOR del deudor en el periodo, no la de cada credito por
+-- separado. Un deudor al dia en su hipoteca pero con 90 dias de atraso en su tarjeta se
+-- reporta como Dudoso en AMBOS creditos. Es contraintuitivo y es lo que manda la norma:
+-- el riesgo es de la persona, no del producto.
+WITH base AS (
     SELECT  c.deudor_id,
             TO_CHAR(p.fecha_corte, 'YYYYMM')                      AS periodo,
             p.fecha_corte,
-            MIN(c.tipo_credito_cod)                               AS tipo_credito_cod,
+            c.tipo_credito_cod,
+            c.moneda_cod,
+            -- El atraso depende del deudor Y DEL TIPO DE CREDITO. No es un adorno: sin esa
+            -- variacion todos los creditos de una persona tendrian los mismos dias, y el
+            -- alineamiento nunca se notaria. En la realidad la gente prioriza: paga la
+            -- hipoteca y deja de pagar la tarjeta.
             MAX(CASE
                   WHEN c.deudor_id % 20 = 0 THEN   9 + ((c.deudor_id * 3 + p.idx) % 22)
                   WHEN c.deudor_id % 33 = 0 THEN  31 + ((c.deudor_id + p.idx) % 30)
                   WHEN c.deudor_id % 47 = 0 THEN  61 + ((c.deudor_id + p.idx) % 60)
                   WHEN c.deudor_id % 61 = 0 THEN 121 + ((c.deudor_id + p.idx * 7) % 200)
                   ELSE (c.deudor_id + p.idx) % 9
-                END)::INTEGER                                     AS dias_atraso,
+                END
+                -- El credito de consumo revolvente (tipo 6, la tarjeta) es el primero
+                -- que se deja de pagar: se le suma atraso. El hipotecario (8), el ultimo.
+                + CASE c.tipo_credito_cod
+                      WHEN '6' THEN 25 + ((c.deudor_id + p.idx) % 40)
+                      WHEN '7' THEN  5 + ((c.deudor_id + p.idx) % 10)
+                      ELSE 0
+                  END)::INTEGER                                   AS dias_atraso,
             ROUND(SUM(c.monto_desembolsado
                   * GREATEST(1 - (p.idx::NUMERIC / GREATEST(c.plazo_meses, 1)), 0.05)), 2) AS saldo_capital,
             BOOL_OR(c.tiene_garantia)                             AS tiene_garantia
@@ -330,12 +337,43 @@ FROM (
     ) AS p(idx, fecha_corte)
     WHERE   c.estado_credito = 'VIGENTE'
       AND   c.fecha_desembolso <= p.fecha_corte
-    GROUP BY c.deudor_id, p.fecha_corte, p.idx
-) AS x
-JOIN par_provision pp
-      ON pp.clasificacion_cod = fn_clasificar(x.tipo_credito_cod, x.dias_atraso, x.fecha_corte)
-     AND pp.tiene_garantia    = x.tiene_garantia
-     AND x.fecha_corte BETWEEN pp.fecha_desde AND pp.fecha_hasta;
+    GROUP BY c.deudor_id, p.fecha_corte, p.idx, c.tipo_credito_cod, c.moneda_cod
+),
+con_propia AS (
+    SELECT  b.*,
+            fn_clasificar(b.tipo_credito_cod, b.dias_atraso, b.fecha_corte) AS clasif_propia
+    FROM    base b
+),
+alineada AS (
+    -- La peor del deudor en el periodo. Los codigos van de '0' (Normal) a '4' (Perdida),
+    -- asi que "la peor" es literalmente MAX() sobre el codigo.
+    SELECT  cp.*,
+            MAX(cp.clasif_propia) OVER (PARTITION BY cp.deudor_id, cp.periodo) AS clasif_alineada
+    FROM    con_propia cp
+)
+INSERT INTO deudor_clasificacion_mes (deudor_id, periodo, fecha_corte, tipo_credito_cod,
+                                      moneda_cod, dias_atraso, clasificacion_propia_cod,
+                                      clasificacion_cod, saldo_capital,
+                                      tiene_garantia, tasa_provision, monto_provision)
+SELECT  a.deudor_id,
+        a.periodo,
+        a.fecha_corte,
+        a.tipo_credito_cod,
+        a.moneda_cod,
+        a.dias_atraso,
+        a.clasif_propia,
+        a.clasif_alineada,
+        a.saldo_capital,
+        a.tiene_garantia,
+        pp.tasa_provision,
+        -- La provision se calcula sobre la clasificacion ALINEADA, no sobre la propia.
+        -- Ese es el efecto economico del alineamiento y la razon de que exista la regla.
+        ROUND(a.saldo_capital * pp.tasa_provision, 2)
+FROM    alineada a
+JOIN    par_provision pp
+      ON pp.clasificacion_cod = a.clasif_alineada
+     AND pp.tiene_garantia    = a.tiene_garantia
+     AND a.fecha_corte BETWEEN pp.fecha_desde AND pp.fecha_hasta;
 
 -- =====================================================================================
 -- 9. SINCRONIZAR SECUENCIAS

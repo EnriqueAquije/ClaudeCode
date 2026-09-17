@@ -132,6 +132,27 @@ INSERT INTO reporte_linaje (reporte_cod, version, campo_cod, esquema_origen, tab
     ('RCD',2,'FECHA_CORTE',   'caso02','deudor_clasificacion_mes','fecha_corte',
      'Ultimo dia calendario del periodo, formato AAAAMMDD',             'Arquitectura de Datos');
 
+-- 3.1 La version 1 tambien tiene sus validaciones y su linaje.
+--
+--     Esto no es relleno: 5 de los 8 envios usan la version 1, porque su fecha de corte es
+--     anterior a julio. Sin estas filas, cualquier consulta que una un envio con las reglas
+--     que se le aplicaron devuelve VACIO para esos cinco envios -- y una regla de calidad que
+--     solo mire la version vigente dara OK sin haber revisado nada.
+--
+--     Versionar una estructura obliga a versionar TODO lo que cuelga de ella.
+INSERT INTO reporte_validacion (reporte_cod, version, validacion_cod, descripcion,
+                                severidad, expresion_sql, base_legal)
+SELECT 'RCD', 1, validacion_cod, descripcion, severidad, expresion_sql, base_legal
+FROM   reporte_validacion WHERE reporte_cod = 'RCD' AND version = 2;
+
+INSERT INTO reporte_linaje (reporte_cod, version, campo_cod, esquema_origen, tabla_origen,
+                            columna_origen, transformacion, responsable)
+SELECT 'RCD', 1, campo_cod, esquema_origen, tabla_origen, columna_origen,
+       transformacion, responsable
+FROM   reporte_linaje
+WHERE  reporte_cod = 'RCD' AND version = 2
+  AND  campo_cod <> 'GARANTIA';   -- ese campo no existia en la version 1
+
 -- =====================================================================================
 -- 4. GENERACIÓN DE LOS ENVÍOS (periodos 202603 a 202609)
 -- =====================================================================================
@@ -156,14 +177,15 @@ INSERT INTO reporte_detalle (envio_id, num_linea, tipo_doc_cod, num_doc, nombre_
                              tipo_credito_cod, clasificacion_cod, dias_atraso, moneda_cod,
                              saldo_capital, monto_provision, tiene_garantia, fecha_corte)
 SELECT  e.envio_id,
-        ROW_NUMBER() OVER (PARTITION BY e.envio_id ORDER BY d.num_doc)::INTEGER,
+        ROW_NUMBER() OVER (PARTITION BY e.envio_id
+                           ORDER BY d.num_doc, dcm.tipo_credito_cod, dcm.moneda_cod)::INTEGER,
         d.tipo_doc_cod,
         d.num_doc,
         d.ape_paterno || ' ' || COALESCE(d.ape_materno, '') || ', ' || d.nombres,
         dcm.tipo_credito_cod,
         dcm.clasificacion_cod,
         dcm.dias_atraso,
-        'PEN',
+        dcm.moneda_cod,          -- viene del origen, ya no va fija a 'PEN'
         dcm.saldo_capital,
         dcm.monto_provision,
         CASE WHEN dcm.tiene_garantia THEN 'S' ELSE 'N' END,
@@ -318,8 +340,13 @@ JOIN    reporte_envio   o ON o.envio_id = d.envio_id
                          AND o.periodo = '202606' AND o.num_envio = 1
 JOIN    reporte_envio   r ON r.periodo = '202606' AND r.num_envio = 2
 JOIN    caso02.deudor   de  ON de.tipo_doc_cod = d.tipo_doc_cod AND de.num_doc = d.num_doc
-JOIN    caso02.deudor_clasificacion_mes dcm ON dcm.deudor_id = de.deudor_id
-                                           AND dcm.fecha_corte = d.fecha_corte;
+-- El JOIN va al GRANO COMPLETO: deudor + fecha + tipo de credito + moneda.
+-- Unir solo por deudor y fecha multiplicaba las filas en cuanto un deudor tiene dos
+-- creditos, y el rectificatorio salia con lineas duplicadas: peor que el original.
+JOIN    caso02.deudor_clasificacion_mes dcm ON dcm.deudor_id        = de.deudor_id
+                                           AND dcm.fecha_corte      = d.fecha_corte
+                                           AND dcm.tipo_credito_cod = d.tipo_credito_cod
+                                           AND dcm.moneda_cod       = d.moneda_cod;
 
 UPDATE reporte_envio e
 SET    cant_registros = t.n, monto_total = t.saldo,

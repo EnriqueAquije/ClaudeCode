@@ -76,6 +76,8 @@ erDiagram
         INTEGER      num_linea      PK
         CHAR_2       tipo_doc_cod   UK
         VARCHAR_20   num_doc        UK
+        CHAR_1       tipo_credito_cod UK
+        CHAR_3       moneda_cod     UK
         VARCHAR_160  nombre_deudor
         CHAR_1       tipo_credito_cod
         CHAR_1       clasificacion_cod

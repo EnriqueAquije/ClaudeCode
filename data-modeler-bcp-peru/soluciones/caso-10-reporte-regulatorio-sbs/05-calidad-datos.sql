@@ -32,12 +32,18 @@ WITH resultados AS (
            (SELECT COUNT(*) FROM reporte_detalle d
             WHERE NOT EXISTS (SELECT 1 FROM reporte_envio e WHERE e.envio_id = d.envio_id)) AS incumple
     UNION ALL
-    SELECT 'CAL-02', 'Trazabilidad', 'Todo campo de la version vigente tiene linaje documentado',
+    -- SIN alcance incrustado: TODAS las versiones, no solo la vigente. La version anterior
+    -- tambien hay que poder explicarla, porque hay envios remitidos con ella.
+    SELECT 'CAL-02', 'Trazabilidad', 'Todo campo de TODA version tiene linaje documentado',
            (SELECT COUNT(*) FROM reporte_campo c
-            WHERE c.reporte_cod = 'RCD' AND c.version = 2
-              AND NOT EXISTS (SELECT 1 FROM reporte_linaje l
+            WHERE NOT EXISTS (SELECT 1 FROM reporte_linaje l
                               WHERE l.reporte_cod = c.reporte_cod AND l.version = c.version
                                 AND l.campo_cod = c.campo_cod))
+    UNION ALL
+    SELECT 'CAL-18', 'Trazabilidad', 'Toda version usada por un envio tiene sus validaciones',
+           (SELECT COUNT(*) FROM (SELECT DISTINCT reporte_cod, version FROM reporte_envio) e
+            WHERE NOT EXISTS (SELECT 1 FROM reporte_validacion v
+                              WHERE v.reporte_cod = e.reporte_cod AND v.version = e.version))
     UNION ALL
     SELECT 'CAL-03', 'Cuadre', 'El indicador de cuadre coincide con diferencia y tolerancia',
            (SELECT COUNT(*) FROM cuadre_reporte
@@ -50,10 +56,22 @@ WITH resultados AS (
               AND EXISTS (SELECT 1 FROM reporte_error r
                           WHERE r.envio_id = e.envio_id AND r.severidad = 'BLOQUEA'))
     UNION ALL
-    SELECT 'CAL-05', 'Unicidad', 'Un deudor aparece una sola vez por envio',
+    -- El grano del RCD es deudor x tipo de credito x moneda. Repetir ESA combinacion es
+    -- causal de observacion; que un deudor tenga varias lineas es lo correcto.
+    SELECT 'CAL-05', 'Unicidad', 'Sin lineas repetidas al grano (deudor, tipo credito, moneda)',
            (SELECT COUNT(*) FROM (
-                SELECT envio_id, tipo_doc_cod, num_doc FROM reporte_detalle
-                GROUP BY 1,2,3 HAVING COUNT(*) > 1) x)
+                SELECT envio_id, tipo_doc_cod, num_doc, tipo_credito_cod, moneda_cod
+                FROM   reporte_detalle
+                GROUP BY 1,2,3,4,5 HAVING COUNT(*) > 1) x)
+    UNION ALL
+    -- La contraparte, y la que detecta el error que este caso tenia: que el envio deje
+    -- FUERA a un deudor que el origen si reporta. Un RCD incompleto es observable.
+    SELECT 'CAL-17', 'Completitud', 'El envio reporta todas las lineas que entrega el origen',
+           (SELECT COUNT(*) FROM reporte_envio e
+            WHERE  e.num_envio = 1
+              AND  e.cant_registros <> (SELECT COUNT(*)
+                                        FROM   caso02.deudor_clasificacion_mes dcm
+                                        WHERE  dcm.fecha_corte = e.fecha_corte))
     UNION ALL
     SELECT 'CAL-06', 'Coherencia', 'La provision nunca supera el saldo de capital',
            (SELECT COUNT(*) FROM reporte_detalle WHERE monto_provision > saldo_capital)

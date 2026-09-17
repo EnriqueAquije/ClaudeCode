@@ -239,24 +239,49 @@ CREATE TABLE cronograma_cuota (
 COMMENT ON COLUMN cronograma_cuota.monto_cuota IS 'Cuota total = capital + interes + seguro (CHECK lo garantiza).';
 
 -- Foto mensual del deudor: lo que se reporta a la SBS y permite reconstruir el pasado.
+-- GRANO: un deudor, un periodo, UN TIPO DE CREDITO y UNA MONEDA.
+--
+-- La version anterior de este modelo tenia la PK en (deudor_id, periodo), y era un error
+-- de grano con consecuencias: un deudor con credito de consumo Y credito hipotecario no
+-- cabia, asi que la carga elegia uno con MIN(tipo_credito_cod) y el otro desaparecia.
+-- Aguas abajo eso produce un reporte a la SBS incompleto, que es causal de observacion.
+--
+-- Como saber que el grano esta mal: mira las columnas de la fila y pregunta si TODAS
+-- dependen de la clave completa. `tipo_credito_cod` no dependia de (deudor, periodo):
+-- un deudor puede tener varios. Esa es la pregunta, y es la misma de la 2FN.
 CREATE TABLE deudor_clasificacion_mes (
     deudor_id         BIGINT        NOT NULL,
     periodo           CHAR(6)       NOT NULL,           -- AAAAMM
     fecha_corte       DATE          NOT NULL,
     tipo_credito_cod  CHAR(1)       NOT NULL,
+    moneda_cod        CHAR(3)       NOT NULL,
     dias_atraso       INTEGER       NOT NULL,
+    -- Las DOS clasificaciones, y la diferencia entre ellas es la regla de alineamiento:
+    --   propia   = la que le corresponde a ESTE credito por sus propios dias de atraso
+    --   alineada = la PEOR del deudor en el periodo, que es la que manda (RN-06)
+    clasificacion_propia_cod CHAR(1) NOT NULL,
     clasificacion_cod CHAR(1)       NOT NULL,
     saldo_capital     NUMERIC(18,2) NOT NULL,
     tiene_garantia    BOOLEAN       NOT NULL DEFAULT FALSE,
     tasa_provision    NUMERIC(9,6)  NOT NULL,
     monto_provision   NUMERIC(18,2) NOT NULL,
-    CONSTRAINT pk_deudor_clasif_mes   PRIMARY KEY (deudor_id, periodo),
+    CONSTRAINT pk_deudor_clasif_mes   PRIMARY KEY (deudor_id, periodo, tipo_credito_cod, moneda_cod),
     CONSTRAINT fk_deudor_clasif_deu   FOREIGN KEY (deudor_id)         REFERENCES deudor (deudor_id),
     CONSTRAINT fk_deudor_clasif_tipo  FOREIGN KEY (tipo_credito_cod)  REFERENCES cat_tipo_credito (tipo_credito_cod),
+    CONSTRAINT fk_deudor_clasif_mon   FOREIGN KEY (moneda_cod)        REFERENCES cat_moneda (moneda_cod),
     CONSTRAINT fk_deudor_clasif_clas  FOREIGN KEY (clasificacion_cod) REFERENCES cat_clasificacion (clasificacion_cod),
+    CONSTRAINT fk_deudor_clasif_prop  FOREIGN KEY (clasificacion_propia_cod) REFERENCES cat_clasificacion (clasificacion_cod),
     CONSTRAINT ck_deudor_clasif_dias  CHECK (dias_atraso >= 0),
-    CONSTRAINT ck_deudor_clasif_per   CHECK (periodo ~ '^[0-9]{6}$')
+    CONSTRAINT ck_deudor_clasif_per   CHECK (periodo ~ '^[0-9]{6}$'),
+    -- El alineamiento solo puede EMPEORAR la clasificacion propia, nunca mejorarla.
+    CONSTRAINT ck_deudor_clasif_alin  CHECK (clasificacion_cod >= clasificacion_propia_cod)
 );
+COMMENT ON TABLE deudor_clasificacion_mes IS
+    'Foto mensual por deudor, tipo de credito y moneda. El grano NO es (deudor, periodo): '
+    'un deudor puede tener varios tipos de credito vivos a la vez.';
+COMMENT ON COLUMN deudor_clasificacion_mes.clasificacion_cod IS
+    'Clasificacion ALINEADA: la peor del deudor en el periodo (Res. SBS 11356-2008). '
+    'Es la que se reporta y la que determina la provision de TODOS sus creditos.';
 COMMENT ON TABLE deudor_clasificacion_mes IS
     'Snapshot mensual por deudor. Grano: deudor-periodo. Base del reporte regulatorio (caso 10).';
 

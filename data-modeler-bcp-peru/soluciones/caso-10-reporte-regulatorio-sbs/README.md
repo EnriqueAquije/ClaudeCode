@@ -25,23 +25,23 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | `reporte_validacion` | 6 | 4 `BLOQUEA` + 2 `ADVIERTE` |
 | `reporte_linaje` | 11 | Uno por campo de la versión vigente |
 | `reporte_envio` | 8 | 7 originales (202603–202609) + 1 rectificatorio |
-| `reporte_detalle` | 3 001 | Extraídas del `caso02`, no inventadas |
-| `reporte_error` | 12 | 11 reclasificaciones indebidas + 1 saldo en cero, todas en junio |
+| `reporte_detalle` | 3 212 | Extraídas del `caso02`. Un deudor aporta **una línea por tipo de crédito y moneda** |
+| `reporte_error` | 20 | Reclasificaciones indebidas + saldo en cero, todas en junio |
 | `cuadre_reporte` | 15 | 2 conceptos por envío original + 1 en el rectificatorio |
 
-Y **17 reglas de calidad en `OK`**.
+Y **19 reglas de calidad en `OK`**.
 
 ### La narrativa que debe aparecer en PN-01 y PN-05
 
 ```
  periodo | num_envio |   tipo_envio   |  estado   | cant_registros |   concepto    | diferencia | esta_cuadrado
 ---------+-----------+----------------+-----------+----------------+---------------+------------+---------------
- 202606  |         1 | ORIGINAL       | OBSERVADO |            389 | PROVISIONES   |    -256.56 | f
- 202606  |         1 | ORIGINAL       | OBSERVADO |            389 | SALDO_CAPITAL |  -25655.67 | f
- 202606  |         2 | RECTIFICATORIO | ACEPTADO  |            389 | SALDO_CAPITAL |       0.00 | t
+ 202606  |         1 | ORIGINAL       | OBSERVADO |            417 | PROVISIONES   |   -1282.78 | f
+ 202606  |         1 | ORIGINAL       | OBSERVADO |            417 | SALDO_CAPITAL |  -25655.67 | f
+ 202606  |         2 | RECTIFICATORIO | ACEPTADO  |            417 | SALDO_CAPITAL |       0.00 | t
 ```
 
-> **Léelo con calma: es todo el caso en tres filas.** El envío de junio salió con 389 registros y una
+> **Léelo con calma: es todo el caso en tres filas.** El envío de junio salió con 417 registros y una
 > diferencia de −25 655,67 contra contabilidad. La SBS lo observó. El rectificatorio tiene **la misma
 > cantidad de registros** y diferencia **0,00**. Y el original **sigue ahí**, observado, con sus 12
 > hallazgos. Nadie borró nada.

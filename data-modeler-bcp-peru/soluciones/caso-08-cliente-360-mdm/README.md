@@ -15,12 +15,20 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | Concepto | Valor |
 |---|---|
 | Registros en los 6 sistemas | 5 407 |
-| **Clientes reales (maestros)** | **5 212** |
-| Duplicados resueltos | 195 |
+| **Clientes reales (maestros)** | **4 592** |
+| Duplicados resueltos | 953 |
 | Candidatos en revisión manual (homónimos) | 12 |
+| **Clientes presentes en 3 o más sistemas** | **212** (179 en tres, 33 en cuatro) |
 | Referencias cruzadas | 5 407 |
-| Trazas de linaje | 15 534 |
+| Trazas de linaje | 14 082 |
 | Reglas de calidad en `OK` | **16 / 16** |
+
+> **Por qué 5 407 registros dan 4 592 clientes y no 5 212.** La misma persona aparece en varios
+> sistemas: tiene cuenta de ahorros, crédito, billetera y está bajo monitoreo. Los generadores de
+> los casos 01, 02, 04 y 07 **comparten deliberadamente parte del espacio de documentos** para que
+> eso ocurra. Sin ese solape cada sistema vive en su propio universo, ningún cliente aparece en más
+> de dos fuentes, y el MDM no tiene nada que consolidar: es el error más común al construir un juego
+> de datos sintético para probar un MDM, y produce una demo que funciona y no demuestra nada.
 
 ---
 

@@ -172,7 +172,7 @@ de la versión de la definición usada. Y se puede **comprobar** contra el hash.
 | Copiar el detalle observado y corregir las filas malas | **El error de este caso.** Arrastra los errores que no se detectaron |
 
 > **La tercera alternativa es la trampa real.** Parece la más eficiente: "solo 12 filas están mal,
-> copio las 389 y corrijo 12". Pero la observación de la SBS es una **muestra**, no un inventario.
+> copio las 417 y corrijo las señaladas". Pero la observación de la SBS es una **muestra**, no un inventario.
 > Regenerar desde el origen corrige también lo que nadie vio.
 
 ---

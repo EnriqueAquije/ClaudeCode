@@ -121,6 +121,9 @@ INSERT INTO cliente (cliente_id, tipo_doc_cod, num_doc, nombre_completo, es_pers
 SELECT  n,
         CASE WHEN n % 9 = 0 THEN '06' ELSE '01' END,
         CASE WHEN n % 9 = 0 THEN '20' || LPAD((500000000 + n * 13)::TEXT, 9, '0')
+             -- 1 de cada 5 monitoreados es tambien cliente de captaciones (caso 01):
+             -- el monitoreo PLAFT no vigila a desconocidos, vigila a los propios clientes.
+             WHEN n % 5 = 0 THEN LPAD((70000000 + ((n / 5) % 500 + 1) * 13)::TEXT, 8, '0')
              ELSE LPAD((74000000 + n * 17)::TEXT, 8, '0') END,
         CASE WHEN n % 9 = 0
              THEN 'EMPRESA ' || (ARRAY['ANDINA','PACIFICO','CENTRAL','DEL SUR','NORTE',

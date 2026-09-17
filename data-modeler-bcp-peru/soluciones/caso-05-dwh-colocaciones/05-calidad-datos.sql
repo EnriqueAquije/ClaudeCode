@@ -86,10 +86,20 @@ WITH resultados AS (
                 SELECT tiempo_sk, cuenta_id_origen FROM fact_saldo_captacion_mes
                 GROUP BY 1, 2 HAVING COUNT(*) > 1) x)
     UNION ALL
-    SELECT 'CAL-10', 'Grano', 'Snapshot de colocacion sin duplicados (deudor-mes)',
+    -- El grano declarado es deudor x mes x producto x moneda. Esta regla verifica ESE grano,
+    -- no uno mas grueso: un deudor con tarjeta e hipoteca DEBE tener dos filas en el mes.
+    SELECT 'CAL-10', 'Grano', 'Snapshot de colocacion al grano declarado (deudor-mes-producto-moneda)',
            (SELECT COUNT(*) FROM (
-                SELECT tiempo_sk, deudor_id_origen FROM fact_colocacion_mes
-                GROUP BY 1, 2 HAVING COUNT(*) > 1) x)
+                SELECT tiempo_sk, deudor_id_origen, producto_sk, moneda_cod
+                FROM   fact_colocacion_mes
+                GROUP BY 1,2,3,4 HAVING COUNT(*) > 1) x)
+    UNION ALL
+    -- La contraparte: el hecho tiene que traer TODAS las filas del origen. Si alguien
+    -- "arregla" un duplicado colapsando el grano, esta regla lo detecta.
+    SELECT 'CAL-16', 'Cuadre ETL', 'El hecho de colocacion trae todas las filas del origen',
+           (SELECT ABS(
+                (SELECT COUNT(*) FROM fact_colocacion_mes)
+              - (SELECT COUNT(*) FROM caso02.deudor_clasificacion_mes)))
     UNION ALL
     SELECT 'CAL-11', 'Conformidad', 'dim_producto cubre captacion y colocacion',
            (SELECT COUNT(*) FROM (SELECT 1 WHERE

@@ -54,7 +54,16 @@ INSERT INTO usuario_billetera (usuario_id, num_celular, tipo_doc_cod, num_doc, n
 SELECT  n,
         '9' || LPAD((10000000 + n * 7)::TEXT, 8, '0'),
         '01',
-        LPAD((73000000 + n * 11)::TEXT, 8, '0'),
+        -- MISMA PERSONA, DISTINTO SISTEMA.
+        -- 1 de cada 6 usuarios de la billetera comparte documento con un cliente de
+        -- captaciones (rango 70xxxxxx del caso 01), porque es la misma persona. Sin ese
+        -- solape, cada sistema vive en su propio universo de documentos y el caso 08
+        -- (Cliente 360) no puede consolidar nada: es un MDM sin nada que unificar.
+        -- Los juegos de datos sinteticos fallan casi siempre por aqui.
+        CASE WHEN n % 6 = 0
+             THEN LPAD((70000000 + ((n / 6) % 500 + 1) * 13)::TEXT, 8, '0')
+             ELSE LPAD((73000000 + n * 11)::TEXT, 8, '0')
+        END,
         (ARRAY['MARIA','JOSE','ROSA','CARLOS','ANA','LUIS','CARMEN','JORGE','ELENA','MIGUEL'])[1 + (n % 10)]
             || ' ' ||
         (ARRAY['QUISPE','MAMANI','FLORES','HUAMAN','ROJAS','VASQUEZ','CHAVEZ','SANCHEZ'])[1 + ((n * 3) % 8)],
@@ -122,12 +131,42 @@ CROSS JOIN LATERAL generate_series(1, 30 + (u.usuario_id % 40)) AS g(k)
 CROSS JOIN LATERAL (
     SELECT
         TIMESTAMP '2026-07-01 00:00:00'
-            + (((u.usuario_id * 3 + g.k * 7) % 92)) * INTERVAL '1 day'
+            -- Las transferencias de MONTO ALTO (ver mas abajo) se concentran en un mismo dia
+            -- por usuario. Es lo que hace la gente: paga el alquiler, la cuota del colegio y
+            -- le manda a un familiar, todo el dia que cobra. Y es lo que hace que el control
+            -- de limite diario (PN-07) tenga algo que detectar: repartidas a lo largo de tres
+            -- meses, ninguna suma diaria se acerca al limite y la pregunta no tiene respuesta.
+            + CASE WHEN u.usuario_id % 10 = 0 AND (u.usuario_id * 11 + g.k) % 6 = 0
+                   THEN ((u.usuario_id * 3) % 92)
+                   ELSE ((u.usuario_id * 3 + g.k * 7) % 92) END * INTERVAL '1 day'
             + (6 + ((u.usuario_id + g.k * 5) % 16)) * INTERVAL '1 hour'
             + ((u.usuario_id * g.k) % 60) * INTERVAL '1 minute'                       AS fecha_operacion,
-        1 + ((u.usuario_id * 37 + g.k * 101) % 3000)                                  AS usuario_destino_tmp,
+        -- EL CIRCULO DE CONTACTOS. Una persona no transfiere a 40 destinatarios distintos:
+        -- le transfiere muchas veces a los mismos cinco -- pareja, madre, dos amigos, la
+        -- bodega de la esquina -- y de vez en cuando a alguien nuevo.
+        -- Si el destino se deriva de `k` a secas, NINGUN par origen-destino se repite jamas
+        -- y la pregunta de negocio "red de contactos" (PN-06) no tiene respuesta posible.
+        -- Un juego de datos sintetico tiene que reproducir la ESTRUCTURA del fenomeno,
+        -- no solo su volumen.
+        CASE WHEN g.k % 10 < 7
+             THEN 1 + ((u.usuario_id * 37 + (g.k % 5) * 101) % 3000)   -- 70 %: su circulo
+             ELSE 1 + ((u.usuario_id * 37 + g.k * 101) % 3000)         -- 30 %: esporadico
+        END                                                                           AS usuario_destino_tmp,
         CASE WHEN (u.usuario_id + g.k) % 23 = 0 THEN 'PAGO_QR' ELSE 'ENVIO' END       AS tipo_op_cod,
-        ROUND((5 + ((u.usuario_id * 13 + g.k * 29) % 46))::NUMERIC, 2)                AS monto,
+        -- La mayoria de operaciones son pequenas (5 a 50 soles), el perfil real de una
+        -- billetera movil. Pero 1 de cada 10 usuarios tiene un DIA DE PAGOS: concentra varias
+        -- operaciones de monto alto -- alquiler, matricula, un pago entre conocidos -- en la
+        -- misma jornada, tipicamente la que cobra.
+        --
+        -- IMPORTANTE: el monto alto se queda por DEBAJO del limite POR OPERACION (500 para
+        -- persona natural). Cada transferencia es individualmente legal; lo que se excede es
+        -- la SUMA del dia. Ese es el escenario que de verdad importa y el que un control
+        -- operacion-a-operacion no ve: hay que acumular por usuario y por dia para detectarlo.
+        -- Es tambien, en pequeno, el mismo razonamiento del fraccionamiento del caso 07.
+        CASE WHEN u.usuario_id % 10 = 0 AND (u.usuario_id * 11 + g.k) % 6 = 0
+             THEN ROUND((300 + ((u.usuario_id * 17 + g.k * 43) % 180))::NUMERIC, 2)
+             ELSE ROUND((5 + ((u.usuario_id * 13 + g.k * 29) % 46))::NUMERIC, 2)
+        END                                                                           AS monto,
         CASE
             WHEN (u.usuario_id * 7 + g.k) % 53 = 0 THEN 'RECHAZADA'
             ELSE 'CONFIRMADA'

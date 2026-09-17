@@ -38,7 +38,7 @@ Te encargan modelar el proceso regulatorio completo.
 | RN-08 | Un envío observado se corrige con un **rectificatorio**. El original **no se borra ni se modifica**. |
 | RN-09 | El primer envío de un periodo es `ORIGINAL`; los siguientes, `RECTIFICATORIO`. |
 | RN-10 | El rectificatorio se **regenera desde el origen**, no se parcha el archivo observado. |
-| RN-11 | Un deudor aparece **una sola vez** por envío. |
+| RN-11 | Un deudor aparece **una sola vez por tipo de crédito y moneda**. Varias líneas por deudor es lo normal: quien tiene tarjeta e hipoteca aporta dos. |
 | RN-12 | Los totales del envío se **derivan del detalle**, nunca se digitan. |
 | RN-13 | Todo envío remitido conserva el **hash del archivo** enviado. |
 
@@ -85,16 +85,22 @@ Te encargan modelar el proceso regulatorio completo.
 
 ## 6. Trampas del caso
 
-1. **La estructura en el código.** Si tu generador tiene las posiciones incrustadas, no resolviste
+1. **El grano del detalle.** ¿Una línea por deudor, o una por deudor y tipo de crédito? Decídelo
+   **antes** de escribir el `CREATE TABLE`, y comprueba tu respuesta contra el origen: ¿cuántos
+   deudores del `caso02` tienen más de un tipo de crédito vigente? Si pones `UNIQUE (envío,
+   documento)` porque suena a buena higiene, dejarás fuera del reporte a todos ellos — y un RCD
+   incompleto es causal de observación. El control correcto es más largo de escribir y es el único
+   que reporta la realidad.
+2. **La estructura en el código.** Si tu generador tiene las posiciones incrustadas, no resolviste
    el problema del enunciado.
-2. **Borrar el envío observado.** Destruye la evidencia. El supervisor puede pedir explicar
+3. **Borrar el envío observado.** Destruye la evidencia. El supervisor puede pedir explicar
    exactamente qué cambió entre un envío y otro.
-3. **Parchar el archivo observado.** El rectificatorio debe **regenerarse desde el origen**. Copiar
+4. **Parchar el archivo observado.** El rectificatorio debe **regenerarse desde el origen**. Copiar
    el archivo con error y corregir dos líneas a mano suele introducir errores nuevos.
-4. **Calcular los totales antes de las correcciones.** Si corriges el detalle y no recalculas los
+5. **Calcular los totales antes de las correcciones.** Si corriges el detalle y no recalculas los
    totales, el archivo se autocontradice — y es lo primero que revisa el validador del supervisor.
-5. **Un `CHECK` no reemplaza una validación.** Una clasificación "Normal" con 60 días de atraso es
+6. **Un `CHECK` no reemplaza una validación.** Una clasificación "Normal" con 60 días de atraso es
    estructuralmente válida: ninguna restricción de la base lo impide. **Solo una regla de validación
    lo detecta.**
-6. **El indicador de cuadre digitado.** Si `esta_cuadrado` es una columna que alguien marca, alguien
+7. **El indicador de cuadre digitado.** Si `esta_cuadrado` es una columna que alguien marca, alguien
    la marcará mal. Debe derivarse de la diferencia y la tolerancia.

@@ -5,13 +5,23 @@
 
 SET search_path TO caso02;
 
-\echo '-- CAL-03 (detalle): clasificacion incoherente con los dias de atraso'
+\echo '-- CAL-03 (detalle): clasificacion PROPIA incoherente con los dias de atraso'
 SELECT  dcm.deudor_id, dcm.periodo, dcm.tipo_credito_cod, dcm.dias_atraso,
-        dcm.clasificacion_cod                                              AS clasif_registrada,
+        dcm.clasificacion_propia_cod                                       AS clasif_registrada,
         fn_clasificar(dcm.tipo_credito_cod, dcm.dias_atraso, dcm.fecha_corte) AS clasif_esperada
 FROM    deudor_clasificacion_mes dcm
-WHERE   dcm.clasificacion_cod <> fn_clasificar(dcm.tipo_credito_cod, dcm.dias_atraso, dcm.fecha_corte)
+WHERE   dcm.clasificacion_propia_cod <> fn_clasificar(dcm.tipo_credito_cod, dcm.dias_atraso, dcm.fecha_corte)
 LIMIT 20;
+
+\echo ''
+\echo '-- CAL-17 (detalle): el alineamiento, deudores cuya clasificacion EMPEORA por arrastre'
+SELECT  dcm.deudor_id, dcm.periodo, dcm.tipo_credito_cod, dcm.dias_atraso,
+        dcm.clasificacion_propia_cod AS propia, dcm.clasificacion_cod AS alineada,
+        dcm.saldo_capital, dcm.monto_provision
+FROM    deudor_clasificacion_mes dcm
+WHERE   dcm.clasificacion_cod <> dcm.clasificacion_propia_cod
+ORDER BY dcm.periodo DESC, dcm.deudor_id
+LIMIT 10;
 
 \echo '-- CAL-08 (detalle): solapamiento o hueco en los tramos de dias por tipo de credito'
 WITH tramos AS (
@@ -51,10 +61,27 @@ WITH resultados AS (
             WHERE (estado_sol_cod = 'RECHAZADA' AND motivo_cod IS NULL)
                OR (estado_sol_cod <> 'RECHAZADA' AND motivo_cod IS NOT NULL))
     UNION ALL
-    SELECT 'CAL-03', 'Regulatoria', 'Clasificacion SBS coherente con dias de atraso y norma vigente',
+    SELECT 'CAL-03', 'Regulatoria', 'Clasificacion PROPIA coherente con dias de atraso y norma vigente',
            (SELECT COUNT(*) FROM deudor_clasificacion_mes dcm
-            WHERE dcm.clasificacion_cod
+            WHERE dcm.clasificacion_propia_cod
                   <> fn_clasificar(dcm.tipo_credito_cod, dcm.dias_atraso, dcm.fecha_corte))
+    UNION ALL
+    -- RN-06, la regla de alineamiento. Estaba declarada en el enunciado y no la verificaba
+    -- nada, porque con el grano anterior era imposible expresarla: hacia falta que un deudor
+    -- pudiera tener varias filas en el mismo periodo.
+    SELECT 'CAL-17', 'Regulatoria', 'La clasificacion alineada es la PEOR del deudor en el periodo',
+           (SELECT COUNT(*) FROM (
+                SELECT deudor_id, periodo
+                FROM   deudor_clasificacion_mes
+                GROUP BY deudor_id, periodo
+                HAVING MIN(clasificacion_cod) <> MAX(clasificacion_propia_cod)
+                    OR MIN(clasificacion_cod) <> MAX(clasificacion_cod)) x)
+    UNION ALL
+    SELECT 'CAL-18', 'Grano', 'Un deudor puede tener varios tipos de credito en el mismo periodo',
+           (SELECT COUNT(*) FROM (
+                SELECT deudor_id, periodo, tipo_credito_cod, moneda_cod
+                FROM   deudor_clasificacion_mes
+                GROUP BY 1,2,3,4 HAVING COUNT(*) > 1) x)
     UNION ALL
     SELECT 'CAL-04', 'Cuadre', 'Provision = saldo capital x tasa de provision',
            (SELECT COUNT(*) FROM deudor_clasificacion_mes

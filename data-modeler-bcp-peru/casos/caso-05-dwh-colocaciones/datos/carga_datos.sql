@@ -309,19 +309,26 @@ WHERE       a.fin_mes <= DATE '2027-12-31';
 -- 9. FACT_COLOCACION_MES (snapshot periódico, grano deudor-mes)
 -- =====================================================================================
 
+-- El hecho se carga al MISMO grano que la fuente: deudor x periodo x producto x moneda.
+-- `cant_creditos` cuenta los creditos DE ESE TIPO Y MONEDA, no todos los del deudor: con el
+-- grano anterior esa medida se repetia identica en cada fila y al sumarla salia inflada.
 INSERT INTO fact_colocacion_mes (tiempo_sk, cliente_sk, producto_sk, deudor_id_origen,
-                                 clasificacion_cod, dias_atraso, saldo_capital,
+                                 moneda_cod, clasificacion_cod, dias_atraso, saldo_capital,
                                  monto_provision, cant_creditos)
 SELECT  TO_CHAR(dcm.fecha_corte, 'YYYYMMDD')::INTEGER,
         COALESCE(dc.cliente_sk, -1),
         COALESCE(dp.producto_sk, -1),
         dcm.deudor_id,
+        dcm.moneda_cod,
         dcm.clasificacion_cod,
         dcm.dias_atraso,
         dcm.saldo_capital,
         dcm.monto_provision,
         (SELECT COUNT(*) FROM caso02.credito cr
-         WHERE cr.deudor_id = dcm.deudor_id AND cr.estado_credito = 'VIGENTE')
+         WHERE cr.deudor_id        = dcm.deudor_id
+           AND cr.tipo_credito_cod = dcm.tipo_credito_cod
+           AND cr.moneda_cod       = dcm.moneda_cod
+           AND cr.estado_credito   = 'VIGENTE')
 FROM        caso02.deudor_clasificacion_mes dcm
 JOIN        caso02.deudor d ON d.deudor_id = dcm.deudor_id
 LEFT JOIN   dim_cliente  dc ON dc.tipo_doc_cod = d.tipo_doc_cod

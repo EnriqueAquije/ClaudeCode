@@ -160,6 +160,30 @@ Por eso CAL-08 verifica que `dias_desde` del tramo siguiente = `dias_hasta + 1` 
 | Campo | Motivo | Control |
 |---|---|---|
 | `deudor_clasificacion_mes.tasa_provision` | Congela la tasa que se aplicó ese mes. Si mañana cambia el parámetro, el histórico no debe cambiar | CAL-04 verifica `provision = saldo × tasa` |
+| `deudor_clasificacion_mes.clasificacion_cod` | Es la clasificación **alineada** del deudor, repetida en todas sus líneas del periodo. Se guarda en vez de derivarse porque es lo que se reportó y lo que determinó la provisión | **CAL-17** verifica que sea la peor de las propias |
+
+### Las dos clasificaciones, y por qué son dos columnas
+
+La regla de alineamiento (RN-06) dice que la clasificación del deudor es **la peor que tenga en
+todo el sistema financiero**. No es por producto: es por persona. Un deudor al día en su hipoteca
+pero con 90 días de atraso en su tarjeta se reporta como Dudoso **en ambos créditos**, y provisiona
+al porcentaje de Dudoso **en ambos**.
+
+Guardar solo la alineada haría imposible auditar de dónde salió; guardar solo la propia obligaría a
+recalcular el alineamiento cada vez que alguien consulte el histórico. Con las dos:
+
+```sql
+-- El efecto del alineamiento, visible en una consulta
+SELECT deudor_id, tipo_credito_cod, dias_atraso,
+       clasificacion_propia_cod AS propia, clasificacion_cod AS alineada, monto_provision
+FROM   deudor_clasificacion_mes
+WHERE  clasificacion_cod <> clasificacion_propia_cod
+ORDER BY periodo DESC, deudor_id
+LIMIT 10;
+```
+
+En el laboratorio **172 líneas empeoran por arrastre**. Sin esas dos columnas, ese número no se
+puede calcular, y es exactamente la pregunta que hace Riesgos cuando sube la provisión del mes.
 | `solicitud_credito.estado_sol_cod` | Evita subconsulta a la historia en cada lectura | CAL-09 verifica contra el último estado histórico |
 | `credito.deudor_id` | Redundante vía `solicitud_id`, pero evita un JOIN en todas las consultas de riesgo | FK a ambas tablas |
 
@@ -172,14 +196,34 @@ Por eso CAL-08 verifica que `dias_desde` del tramo siguiente = `dias_hasta + 1` 
 
 ### `deudor_clasificacion_mes` — la tabla que ve la SBS
 
+> ### 🎯 Declaración de grano
+>
+> **Una fila = un deudor, un periodo, un tipo de crédito, una moneda.**
+>
+> Escríbelo así, en una frase, **antes** de listar las columnas. Es el hábito que evita el error
+> más caro del modelado, y este caso lo tuvo: la primera versión declaraba la clave en
+> `(deudor_id, periodo)` y dejaba `tipo_credito_cod` en la fila.
+>
+> **Cómo se detecta.** Recorre las columnas y pregunta por cada una: *¿depende de la clave
+> completa?* `tipo_credito_cod` no dependía de `(deudor, periodo)` — un deudor puede tener
+> varios tipos de crédito a la vez. Es la pregunta de la 2FN, aplicada a un snapshot.
+>
+> **Qué costaba.** La carga tenía que elegir uno con `MIN(tipo_credito_cod)` y los demás
+> desaparecían. En este laboratorio son **37 deudores** con más de un crédito vigente y
+> **183 filas** perdidas; en un banco son cientos de miles, y el resultado es un reporte a la
+> SBS incompleto. El error no se ve en el caso 02: **estalla dos casos más abajo**, en el
+> reporte regulatorio, que es donde ya es caro.
+
 | Columna | Tipo | Nulo | Dominio / regla | Descripción | Sensibilidad |
 |---|---|---|---|---|---|
-| `deudor_id` | BIGINT | No | FK `deudor` | Deudor clasificado | Interno |
-| `periodo` | CHAR(6) | No | `^[0-9]{6}$` | Periodo AAAAMM | Interno |
+| `deudor_id` | BIGINT | No | **PK**, FK `deudor` | Deudor clasificado | Interno |
+| `periodo` | CHAR(6) | No | **PK**, `^[0-9]{6}$` | Periodo AAAAMM | Interno |
 | `fecha_corte` | DATE | No | Último día del periodo | Fecha de corte del reporte | Interno |
-| `tipo_credito_cod` | CHAR(1) | No | FK `cat_tipo_credito` | Tipo de crédito predominante | Interno |
-| `dias_atraso` | INTEGER | No | ≥ 0 | Días de atraso de la cuota más antigua impaga | **Confidencial** |
-| `clasificacion_cod` | CHAR(1) | No | FK; = `fn_clasificar(...)` | Categoría SBS | **Confidencial** |
+| `tipo_credito_cod` | CHAR(1) | No | **PK**, FK `cat_tipo_credito` | Tipo de crédito de esta línea | Interno |
+| `moneda_cod` | CHAR(3) | No | **PK**, FK `cat_moneda` | Moneda de esta línea | Interno |
+| `dias_atraso` | INTEGER | No | ≥ 0 | Días de atraso de la cuota más antigua impaga **de este tipo de crédito** | **Confidencial** |
+| `clasificacion_propia_cod` | CHAR(1) | No | FK; = `fn_clasificar(...)` | La que le tocaría a esta línea por sus propios días | **Confidencial** |
+| `clasificacion_cod` | CHAR(1) | No | FK; ≥ la propia | **Alineada**: la peor del deudor en el periodo (RN-06) | **Confidencial** |
 | `saldo_capital` | NUMERIC(18,2) | No | ≥ 0 | Saldo de capital a la fecha de corte | **Confidencial** |
 | `tiene_garantia` | BOOLEAN | No | — | Existe garantía preferida | Interno |
 | `tasa_provision` | NUMERIC(9,6) | No | Del parámetro vigente | Tasa aplicada (congelada) | Interno |

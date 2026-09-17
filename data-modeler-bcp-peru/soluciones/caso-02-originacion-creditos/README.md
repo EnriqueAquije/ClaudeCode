@@ -10,7 +10,13 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 900 deudores, 1 400 solicitudes, 700 créditos, 20 400 cuotas,
-2 612 clasificaciones mensuales y **12 reglas de calidad en `OK`**.
+**2 795** filas de snapshot mensual y **14 reglas de calidad en `OK`**.
+
+> **Las 2 795 filas no son 2 612 + ruido.** El snapshot tiene grano
+> `(deudor, periodo, tipo de crédito, moneda)`, así que un deudor con tarjeta e hipoteca
+> produce **dos** filas por mes. Son 183 filas de deudor-periodo con más de una línea, que el
+> modelo anterior perdía. Y **172 de ellas empeoran su clasificación por alineamiento**: ese es
+> el efecto de la regla RN-06, ahora visible en los datos.
 
 ---
 

@@ -160,7 +160,13 @@ CREATE TABLE reporte_detalle (
     fecha_corte        DATE          NOT NULL,
     CONSTRAINT pk_reporte_detalle    PRIMARY KEY (envio_id, num_linea),
     CONSTRAINT fk_reporte_detalle_e  FOREIGN KEY (envio_id) REFERENCES reporte_envio (envio_id),
-    CONSTRAINT uq_reporte_detalle_d  UNIQUE (envio_id, tipo_doc_cod, num_doc),
+    -- UNICIDAD AL GRANO DEL REPORTE: un deudor aparece una vez POR TIPO DE CREDITO Y MONEDA,
+    -- no una sola vez en el envio. Este UNIQUE decia (envio_id, tipo_doc_cod, num_doc) y era
+    -- un error grave disfrazado de control de calidad: obligaba a dejar fuera del reporte a
+    -- todo deudor con mas de un tipo de credito vivo. En el laboratorio son 38 deudores; en
+    -- un banco son cientos de miles, y el resultado es un RCD incompleto, que la SBS observa.
+    CONSTRAINT uq_reporte_detalle_d  UNIQUE (envio_id, tipo_doc_cod, num_doc,
+                                             tipo_credito_cod, moneda_cod),
     CONSTRAINT ck_reporte_det_clasif CHECK (clasificacion_cod IN ('0','1','2','3','4')),
     CONSTRAINT ck_reporte_det_tipo   CHECK (tipo_credito_cod IN ('1','2','3','4','5','6','7','8')),
     CONSTRAINT ck_reporte_det_gar    CHECK (tiene_garantia IN ('S','N')),
@@ -169,7 +175,8 @@ CREATE TABLE reporte_detalle (
     CONSTRAINT ck_reporte_det_prov   CHECK (monto_provision <= saldo_capital)
 );
 COMMENT ON CONSTRAINT uq_reporte_detalle_d ON reporte_detalle IS
-    'Un deudor aparece UNA sola vez por envio. Un deudor duplicado es causal de observacion.';
+    'Un deudor aparece una vez POR TIPO DE CREDITO Y MONEDA. Repetir esa combinacion es '
+    'causal de observacion; tener varias lineas por deudor es lo correcto y lo esperado.';
 COMMENT ON CONSTRAINT ck_reporte_det_prov ON reporte_detalle IS
     'La provision no puede superar el saldo: seria un error aritmetico evidente para el supervisor.';
 

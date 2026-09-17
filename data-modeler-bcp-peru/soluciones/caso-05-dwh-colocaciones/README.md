@@ -22,9 +22,9 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | `dim_cliente` | 1 501 (de las cuales **100 son versión 2** del SCD2) |
 | `fact_movimiento` | 27 807 |
 | `fact_saldo_captacion_mes` | 3 188 |
-| `fact_colocacion_mes` | 2 612 |
+| `fact_colocacion_mes` | 2 795 | Grano: mes × deudor × producto × moneda |
 
-Y **16 reglas de calidad en `OK`**, incluyendo el cuadre exacto contra los sistemas fuente.
+Y **17 reglas de calidad en `OK`**, incluyendo el cuadre exacto contra los sistemas fuente.
 
 ---
 
