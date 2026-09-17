@@ -200,7 +200,7 @@ psql -d bcp_lab -f soluciones/caso-07-plaft-monitoreo/03-modelo-fisico.sql
 psql -d bcp_lab -f casos/caso-07-plaft-monitoreo/datos/carga_datos.sql
 ```
 
-Resultado esperado: 800 clientes, ~27 700 operaciones, 59 en el Registro de Operaciones, **235
+Resultado esperado: 800 clientes, **27 666** operaciones, 59 en el Registro de Operaciones, **235
 alertas** repartidas entre las 5 reglas, 21 casos y 2 ROS.
 
 **Pruebas negativas — cada una debe fallar:**

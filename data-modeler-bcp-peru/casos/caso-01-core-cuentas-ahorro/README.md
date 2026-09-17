@@ -228,7 +228,7 @@ psql -d bcp_lab -f mi-solucion/03-modelo-fisico.sql   # dos veces: debe volver a
 **Objetivo:** demostrar que el modelo **impide** guardar datos incorrectos.
 
 ```bash
-# Carga de datos sintéticos (500 clientes, ~800 cuentas, ~24 000 movimientos)
+# Carga de datos sintéticos (500 clientes, 800 cuentas, 27 807 movimientos)
 psql -d bcp_lab -f casos/caso-01-core-cuentas-ahorro/datos/carga_datos.sql
 ```
 

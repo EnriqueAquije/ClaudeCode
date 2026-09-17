@@ -20,6 +20,8 @@
 | **Casos válidos** | **10 de 10** |
 | **Reglas de calidad en `OK`** | **136** |
 | **Reglas en `FALLA`** | **0** |
+| **Cifras documentadas verificadas** | **66** |
+| **Cifras que no coinciden** | **0** |
 | **Errores de PostgreSQL** | **0** |
 | **Tiempo total** | 31 segundos |
 | **Código de salida** | `0` |
@@ -127,7 +129,37 @@ Si alguien lo hace "por comodidad", la validación falla en la siguiente corrida
 
 ---
 
-## 5. Cómo reproducir esta validación
+## 5. Las cifras de los READMEs se verifican solas
+
+Cada `README.md` de solución dice qué debe producir el caso: *"900 deudores, 1 400 solicitudes,
+700 créditos…"*. Esas cifras son **promesas al lector**, y una promesa que nadie comprueba se rompe
+en silencio: basta que alguien ajuste un generador y olvide el README.
+
+`validacion/cifras-documentadas.sql` compara **lo documentado contra lo que la base contiene**, en
+las 66 cifras que los READMEs citan:
+
+```
+ regla    | familia | descripcion                        | documentado | en_la_base | diferencia | estado
+----------+---------+------------------------------------+-------------+------------+------------+--------
+ DOC-0803 | caso08  | duplicados resueltos = 195         |         195 |        195 |          0 | OK
+ DOC-0906 | caso09  | sat_persona_canal_digital = 1600   |        1600 |       1600 |          0 | OK
+ DOC-1010 | caso10  | registros del rectificatorio = 389 |         389 |        389 |          0 | OK
+```
+
+Se ejecuta como etapa final de `validar.sh`, y **se comprobó que falla cuando debe**: al borrar tres
+filas de un satélite, la verificación las detecta y las nombra.
+
+```
+ DOC-0906 | caso09  | sat_persona_canal_digital = 1600   |        1600 |       1597 |         -3 | FALLA
+```
+
+> **Por qué esto merece ser código y no una revisión manual.** Las 66 cifras se verificaron a mano
+> una vez y coincidían todas. La segunda vez que alguien toque un generador, nadie las va a revisar
+> a mano. Una aserción ejecutable sí.
+
+---
+
+## 6. Cómo reproducir esta validación
 
 ### Requisitos
 
@@ -180,7 +212,7 @@ caso10-02-datos.log      caso10-04-calidad.log
 
 ---
 
-## 6. Qué significa y qué no significa esta validación
+## 7. Qué significa y qué no significa esta validación
 
 **Lo que certifica:**
 
@@ -189,6 +221,7 @@ caso10-02-datos.log      caso10-04-calidad.log
 - Las **98 preguntas de negocio** devuelven resultados (PN-01 a PN-10 en cada caso; PN-01 a PN-08
   en el `caso01`).
 - Las 136 reglas de calidad pasan.
+- Las **66 cifras citadas en los READMEs** coinciden exactamente con lo que la base produce.
 - Los escenarios narrados en los enunciados **ocurren realmente en los datos**: hay deudores que se
   deterioran, hay alertas de PLAFT que se disparan, hay un envío regulatorio que se observa y se
   rectifica, hay duplicados que el MDM resuelve y homónimos que **deja en revisión manual**.
@@ -204,7 +237,7 @@ caso10-02-datos.log      caso10-04-calidad.log
 
 ---
 
-## 7. Determinismo
+## 8. Determinismo
 
 Ningún script usa `random()`. Todos los datos se generan con expresiones deterministas sobre
 `generate_series` (módulos, restos y aritmética de fechas). **Consecuencia práctica:** dos personas

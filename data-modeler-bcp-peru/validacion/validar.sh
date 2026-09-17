@@ -231,6 +231,38 @@ for ID in "${A_EJECUTAR[@]}"; do
 done
 
 # =====================================================================================
+#  Cifras documentadas
+#  Solo en la corrida completa: el script consulta los 10 esquemas a la vez.
+# =====================================================================================
+
+TOTAL_CIFRAS=0
+CIFRAS_FALLA=0
+
+if [ $# -eq 0 ] && [ ${#FALLIDOS[@]} -eq 0 ]; then
+    titulo "CIFRAS DOCUMENTADAS vs. BASE DE DATOS"
+    echo "  Los datos son deterministas, asi que cada cifra citada en un README"
+    echo "  debe cumplirse siempre. Si un generador cambia y el README no, esto falla."
+    echo ""
+    LOG_CIF="${SALIDA}/cifras-documentadas.log"
+    printf '  %-28s' "verificando"
+    if ejecutar_sql "${RAIZ}/validacion/cifras-documentadas.sql" "${LOG_CIF}"; then
+        TOTAL_CIFRAS=$(grep -cE '\| OK *$'    "${LOG_CIF}" || true)
+        CIFRAS_FALLA=$(grep -cE '\| FALLA *$' "${LOG_CIF}" || true)
+        if [ "${CIFRAS_FALLA}" -gt 0 ]; then
+            echo "${ROJO}${CIFRAS_FALLA} CIFRA(S) NO COINCIDEN CON LA DOCUMENTACION${FIN}"
+            grep -E '\| FALLA *$' "${LOG_CIF}" | sed 's/^/      /'
+            FALLIDOS+=("cifras-documentadas")
+        else
+            echo "${VERDE}${TOTAL_CIFRAS} cifras coinciden${FIN}"
+        fi
+    else
+        echo "${ROJO}ERROR${FIN}"
+        tail -n 12 "${LOG_CIF}" | sed 's/^/      /'
+        FALLIDOS+=("cifras-documentadas")
+    fi
+fi
+
+# =====================================================================================
 #  Resumen
 # =====================================================================================
 
@@ -240,6 +272,9 @@ echo "  Casos ejecutados     : ${#A_EJECUTAR[@]}"
 echo "  Casos válidos        : $(( ${#A_EJECUTAR[@]} - ${#FALLIDOS[@]} ))"
 echo "  Reglas de calidad OK : ${TOTAL_OK}"
 echo "  Reglas en FALLA      : ${TOTAL_FALLA}"
+if [ "${TOTAL_CIFRAS}" -gt 0 ] || [ "${CIFRAS_FALLA}" -gt 0 ]; then
+    echo "  Cifras documentadas  : ${TOTAL_CIFRAS} verificadas, ${CIFRAS_FALLA} en FALLA"
+fi
 echo "  Tiempo total         : ${DURACION_GLOBAL}s"
 echo "  Logs                 : ${SALIDA#${RAIZ}/}/"
 

@@ -9,8 +9,12 @@ psql -d bcp_lab -f 04-consultas-negocio.sql
 psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
-**Resultado esperado:** 350 titulares, 400 cuentas, 500 plásticos, 2 400 ciclos, ~23 900
-transacciones, ~13 000 cuotas, 2 400 estados de cuenta y **12 reglas de calidad en `OK`**.
+**Resultado esperado:** 350 titulares, 400 cuentas, 500 plásticos, 2 400 ciclos, **23 872**
+transacciones, **12 966** cuotas, 2 400 estados de cuenta y **12 reglas de calidad en `OK`**.
+
+> Las cifras son **exactas, no aproximadas**: los datos se generan de forma determinista (sin
+> `random()`), así que tu ejecución debe dar estos mismos números. Si no coinciden, algo cambió en tu
+> carga y conviene averiguar qué antes de seguir.
 
 ---
 
@@ -57,7 +61,7 @@ de asignación debe aplicarse correctamente una sola vez, en la carga, y verific
 
 **Consecuencias.** Habilita PN-05 (backlog de cuotas futuras), que es la pregunta que hace Finanzas
 para proyectar ingresos. Sin el plan de cuotas, esa pregunta no tiene respuesta. El costo es una
-tabla adicional de alto volumen (~13 000 filas para 400 cuentas en 6 meses).
+tabla adicional de alto volumen (12 966 filas para 400 cuentas en 6 meses).
 
 ---
 

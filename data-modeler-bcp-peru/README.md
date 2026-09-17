@@ -12,9 +12,12 @@ físico → consultas → validación de calidad).
 > Los 10 casos se ejecutaron completos contra **PostgreSQL 16**: modelo físico → carga de datos →
 > consultas de negocio → reglas de calidad.
 >
-> | Casos válidos | Reglas de calidad en `OK` | Reglas en `FALLA` | Filas cargadas |
-> |:-:|:-:|:-:|:-:|
-> | **10 / 10** | **136** | **0** | **854 701** |
+> | Casos válidos | Reglas de calidad en `OK` | Reglas en `FALLA` | Cifras verificadas | Filas cargadas |
+> |:-:|:-:|:-:|:-:|:-:|
+> | **10 / 10** | **136** | **0** | **66** | **854 701** |
+>
+> Las *cifras verificadas* son las que los READMEs prometen ("900 deudores, 195 duplicados
+> resueltos…"): el validador comprueba que la base las cumpla, no solo que los scripts corran.
 >
 > Reprodúcelo con `./validacion/validar.sh`. Detalle en
 > [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md).
@@ -277,6 +280,7 @@ data-modeler-bcp-peru/
 │       └── mi-solucion/               Espacio para TU propia resolución
 └── validacion/
     ├── validar.sh                     Ejecuta los 10 casos contra PostgreSQL
+    ├── cifras-documentadas.sql        Verifica que los READMEs digan la verdad
     ├── REPORTE-VALIDACION.md          Resultado de la última ejecución
     └── salida/                        Registros de cada ejecución (no versionados)
 ```
@@ -339,8 +343,9 @@ psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/04-consultas-negocio.s
 ```
 
 El script devuelve **código de salida 0** si todos los modelos se crean, todos los datos cargan,
-todas las consultas responden y **todas las reglas de calidad quedan en `OK`**. Si algo falla,
-imprime la regla exacta y deja el registro en `validacion/salida/`.
+todas las consultas responden, **todas las reglas de calidad quedan en `OK`** y **las 66 cifras que
+los READMEs prometen coinciden con la base**. Si algo falla, imprime la regla exacta y deja el
+registro en `validacion/salida/`.
 
 ### Ruta recomendada
 
