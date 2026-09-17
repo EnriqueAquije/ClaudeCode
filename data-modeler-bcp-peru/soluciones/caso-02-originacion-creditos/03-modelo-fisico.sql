@@ -278,11 +278,14 @@ CREATE INDEX ix_clasif_periodo     ON deudor_clasificacion_mes (periodo, clasifi
 --    de parámetros vigente a la fecha de corte.
 -- =====================================================================================
 
+-- NOTA: la funcion califica el esquema de sus tablas. Sin eso, llamarla desde otro
+-- esquema (como hace el caso 10) falla, porque depende del search_path de quien la invoca.
+-- Es un error clasico: una funcion que solo funciona "desde su casa".
 CREATE FUNCTION fn_clasificar(p_tipo_credito CHAR(1), p_dias INTEGER, p_fecha DATE)
 RETURNS CHAR(1)
 LANGUAGE sql STABLE AS $$
     SELECT p.clasificacion_cod
-    FROM   par_clasificacion_dias p
+    FROM   caso02.par_clasificacion_dias p
     WHERE  p.tipo_credito_cod = p_tipo_credito
       AND  p_dias BETWEEN p.dias_desde AND p.dias_hasta
       AND  p_fecha BETWEEN p.fecha_desde AND p.fecha_hasta

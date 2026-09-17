@@ -7,8 +7,17 @@ Contiene **10 casos reales desarrollables de principio a fin**, cada uno con su 
 paso a paso, sus datos y su solución de referencia (modelo conceptual → lógico → entidad-relación →
 físico → consultas → validación de calidad).
 
-> **Todo el contenido de este repositorio fue ejecutado y validado contra PostgreSQL 16.**
-> Ver [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md).
+> ### ✅ Validado de punta a punta
+>
+> Los 10 casos se ejecutaron completos contra **PostgreSQL 16**: modelo físico → carga de datos →
+> consultas de negocio → reglas de calidad.
+>
+> | Casos válidos | Reglas de calidad en `OK` | Reglas en `FALLA` | Filas cargadas |
+> |:-:|:-:|:-:|:-:|
+> | **10 / 10** | **136** | **0** | **854 701** |
+>
+> Reprodúcelo con `./validacion/validar.sh`. Detalle en
+> [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md).
 
 ---
 
@@ -268,7 +277,8 @@ data-modeler-bcp-peru/
 │       └── mi-solucion/               Espacio para TU propia resolución
 └── validacion/
     ├── validar.sh                     Ejecuta los 10 casos contra PostgreSQL
-    └── REPORTE-VALIDACION.md          Resultado de la última ejecución
+    ├── REPORTE-VALIDACION.md          Resultado de la última ejecución
+    └── salida/                        Registros de cada ejecución (no versionados)
 ```
 
 ---
@@ -324,9 +334,13 @@ psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/04-consultas-negocio.s
 ### Validar los 10 casos de una sola vez
 
 ```bash
-cd validacion
-./validar.sh          # usa la conexión por defecto de psql
+./validacion/validar.sh            # los 10 casos, en orden de dependencia
+./validacion/validar.sh caso10     # un solo caso; resuelve sus prerrequisitos solo
 ```
+
+El script devuelve **código de salida 0** si todos los modelos se crean, todos los datos cargan,
+todas las consultas responden y **todas las reglas de calidad quedan en `OK`**. Si algo falla,
+imprime la regla exacta y deja el registro en `validacion/salida/`.
 
 ### Ruta recomendada
 
