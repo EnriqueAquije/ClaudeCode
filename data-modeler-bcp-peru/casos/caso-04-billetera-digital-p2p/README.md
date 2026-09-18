@@ -51,6 +51,9 @@ año**. A ~100 bytes por fila son varios terabytes **solo de transferencias**.
 
 **Entregable:** `mi-solucion/00-dimensionamiento.md`
 
+
+**Verificación:** tu estimación cambia alguna decisión de diseño. Si no cambia ninguna, no era un dimensionamiento: era un número.
+
 ---
 
 ## PASO 2 — Modelo conceptual
@@ -71,6 +74,11 @@ erDiagram
   destinatario?)*
 - ¿`SALDO` es entidad o se calcula siempre? *(pista: ¿cuánto demora sumar 11 500 millones de filas
   cada vez que el usuario abre la app?)*
+
+
+**Entregable:** `mi-solucion/01-modelo-conceptual.md` con el glosario que define *usuario activo*.
+
+**Verificación:** dos personas leyendo tu definición cuentan lo mismo.
 
 ---
 
@@ -110,6 +118,11 @@ SELECT COUNT(*) FROM transferencia_default;
 > En producción, la creación de particiones futuras se automatiza (por ejemplo, con `pg_partman` o
 > un job mensual). La partición `DEFAULT` con una alerta encima es lo que evita que un olvido tumbe
 > la operación a medianoche del día 1.
+
+
+**Entregable:** `mi-solucion/03-modelo-fisico.sql` con la tabla particionada y su partición `DEFAULT`.
+
+**Verificación:** sabes decir qué pasa el día 1 del mes que viene si nadie crea la partición.
 
 ---
 
@@ -161,6 +174,11 @@ flowchart TD
 > **Esta es una decisión de modelado, no de programación.** Si la tabla no existe, ningún código de
 > aplicación puede garantizar la unicidad ante reintentos concurrentes.
 
+
+**Entregable:** Tu diseño de idempotencia.
+
+**Verificación:** inserta dos veces la misma clave. La segunda debe fallar, **y no en la tabla particionada**: explica por qué.
+
 ---
 
 ## PASO 5 — Partida doble en la billetera
@@ -186,6 +204,11 @@ Y el saldo deja de ser un número que alguien escribe:
 ```sql
 CONSTRAINT ck_saldo_billetera CHECK (saldo >= 0)   -- no es una línea de crédito
 ```
+
+
+**Entregable:** Tu modelo de movimientos.
+
+**Verificación:** toda transferencia P2P confirmada genera exactamente dos movimientos que suman cero.
 
 ---
 
@@ -219,7 +242,32 @@ INSERT INTO transferencia (fecha_operacion, usuario_origen_id, usuario_destino_i
 VALUES (TIMESTAMP '2026-08-05 10:00', 1, 2, 'ENVIO', 'PEN', 10, 'RECHAZADA', 'X-2');
 ```
 
+
+**Entregable:** Salida de la carga.
+
+**Verificación:** la partición `DEFAULT` está **vacía**, y tienes una regla que lo comprueba.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Usuarios | 3 000 |
+| Transferencias | 151 500 (148 700 confirmadas, 2 800 rechazadas) |
+| Movimientos | 294 400 |
+| Partición `DEFAULT` | **vacía** |
+| Pares con 3+ transferencias | 14 962 |
+| Días que exceden el límite diario | 182 |
+| Reglas de calidad en `OK` | 15 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 7 — Demostrar la poda de particiones
 
@@ -245,6 +293,11 @@ Ahora quita el filtro de fecha y compara: el plan lista **todas** las particione
 > Un modelo particionado con consultas que no filtran por fecha es más lento que uno sin particionar.
 > El modelador debe **documentar esa expectativa** para quien escriba los reportes.
 
+
+**Entregable:** `mi-solucion/07-plan-ejecucion.md` con la salida de `EXPLAIN`.
+
+**Verificación:** el plan con filtro de fecha toca **una** partición. Sin filtro, las toca todas: compáralos.
+
 ---
 
 ## PASO 8 — Consultas de negocio
@@ -258,6 +311,11 @@ Resuelve PN-01 a PN-10. Notas sobre las difíciles:
   como insumo antifraude (anillos de cuentas que se pasan dinero en círculo).
 - **PN-07 (límites):** agrega por usuario y día, y compara contra `par_limite` **vigente a esa
   fecha** — no contra el límite actual.
+
+
+**Entregable:** `mi-solucion/04-consultas-negocio.sql`
+
+**Verificación:** PN-06 devuelve pares frecuentes y PN-07 devuelve excesos de límite. Si salen vacías, tus datos no reproducen el fenómeno.
 
 ---
 
@@ -273,6 +331,11 @@ Las específicas de este caso:
 | CAL-07 | Idempotencia única global | El control contra el doble cargo |
 | CAL-08 | Partición DEFAULT vacía | Alerta temprana de particiones faltantes |
 | CAL-12 | Ninguna operación excede el límite vigente | Control PLAFT |
+
+
+**Entregable:** `mi-solucion/05-calidad-datos.sql`
+
+**Verificación:** corre `06-pruebas-negativas.sql`. Las 6 deben quedar en `OK`.
 
 ---
 
@@ -296,3 +359,7 @@ saldo materializado con `CHECK`; movimiento separado de transferencia.
 - **Reversas:** modela el flujo de reversión de una transferencia ya confirmada, manteniendo
   CAL-03 y CAL-04.
 - **Monitoreo antifraude en tiempo real:** ese es el **caso 07**.
+
+**Entregable:** `mi-solucion/08-adr.md`
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso04` termina sin fallos.

@@ -118,7 +118,7 @@ CREATE TABLE calidad_registro (
 -- 4. REGLAS DE MATCHING
 -- =====================================================================================
 
-CREATE TABLE regla_match (
+CREATE TABLE cat_regla_match (
     regla_cod      VARCHAR(20)  NOT NULL,
     regla_nombre   VARCHAR(80)  NOT NULL,
     tipo_match     VARCHAR(20)  NOT NULL,
@@ -126,12 +126,12 @@ CREATE TABLE regla_match (
     score_asignado NUMERIC(5,2) NOT NULL,
     umbral_auto    NUMERIC(5,2) NOT NULL,
     esta_activa    BOOLEAN      NOT NULL DEFAULT TRUE,
-    CONSTRAINT pk_regla_match   PRIMARY KEY (regla_cod),
+    CONSTRAINT pk_cat_regla_match   PRIMARY KEY (regla_cod),
     CONSTRAINT ck_regla_tipo    CHECK (tipo_match IN ('DETERMINISTA','PROBABILISTICO')),
     CONSTRAINT ck_regla_score   CHECK (score_asignado BETWEEN 0 AND 100),
     CONSTRAINT ck_regla_umbral  CHECK (umbral_auto BETWEEN 0 AND 100)
 );
-COMMENT ON COLUMN regla_match.umbral_auto IS
+COMMENT ON COLUMN cat_regla_match.umbral_auto IS
     'Score a partir del cual el match se acepta automaticamente. Por debajo va a REVISION MANUAL. '
     'Bajarlo aumenta los falsos positivos (fusionar dos personas distintas): el error mas grave del MDM.';
 
@@ -148,7 +148,7 @@ CREATE TABLE match_candidato (
     CONSTRAINT pk_match_candidato  PRIMARY KEY (candidato_id),
     CONSTRAINT fk_match_a          FOREIGN KEY (fuente_a, id_origen_a) REFERENCES cliente_fuente (fuente_cod, id_origen),
     CONSTRAINT fk_match_b          FOREIGN KEY (fuente_b, id_origen_b) REFERENCES cliente_fuente (fuente_cod, id_origen),
-    CONSTRAINT fk_match_regla      FOREIGN KEY (regla_cod) REFERENCES regla_match (regla_cod),
+    CONSTRAINT fk_match_regla      FOREIGN KEY (regla_cod) REFERENCES cat_regla_match (regla_cod),
     CONSTRAINT ck_match_decision   CHECK (decision IN ('AUTO_MATCH','REVISION','NO_MATCH')),
     CONSTRAINT ck_match_distintos  CHECK (fuente_a <> fuente_b OR id_origen_a <> id_origen_b),
     CONSTRAINT uq_match_par        UNIQUE (fuente_a, id_origen_a, fuente_b, id_origen_b, regla_cod)
@@ -235,6 +235,16 @@ COMMENT ON TABLE cliente_xref IS
 -- =====================================================================================
 -- 7. ÍNDICES
 -- =====================================================================================
+
+
+-- BUSQUEDA POR DOCUMENTO SIN EL TIPO
+-- `UNIQUE (tipo_doc_cod, num_doc)` es la llave correcta, pero NO sirve para buscar solo por
+-- numero: un indice compuesto solo se usa desde su primera columna. Y buscar por DNI a secas
+-- es LA consulta del front-office peruano: ventanilla, centro de contacto, cruce con RENIEC,
+-- cruce con centrales de riesgo. Sin este indice, cada una de esas busquedas es un seq scan
+-- sobre la tabla de clientes.
+CREATE INDEX ix_cliente_fuente_num_doc ON cliente_fuente (num_doc);
+CREATE INDEX ix_cliente_maestro_num_doc ON cliente_maestro (num_doc);
 
 CREATE INDEX ix_cliente_fuente_doc    ON cliente_fuente (tipo_doc_cod, num_doc);
 CREATE INDEX ix_cliente_fuente_nombre ON cliente_fuente USING GIN (nombre_normalizado gin_trgm_ops);

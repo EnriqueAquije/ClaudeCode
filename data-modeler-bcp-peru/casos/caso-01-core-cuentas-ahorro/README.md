@@ -77,6 +77,9 @@ totales diarios, PN-03 y PN-08 se vuelven imposibles.
 
 **Verificación:** ninguna pregunta del enunciado queda sin granularidad asignada.
 
+
+**Entregable:** `mi-solucion/00-preguntas-negocio.md` con las 8 preguntas y su granularidad.
+
 ---
 
 ## PASO 3 — Modelo conceptual
@@ -167,6 +170,9 @@ Esta tabla es el corazón del paso. **Una regla que no vive en el modelo se incu
 | RN-13 operación única | `UNIQUE (num_operacion)` |
 
 **Entregable:** `mi-solucion/02-modelo-logico.md` con el diagrama E-R y el diccionario de datos.
+
+
+**Verificación:** cada tabla pasa 3FN, o tienes escrito por qué la desnormalizaste a propósito.
 
 ---
 
@@ -268,7 +274,27 @@ FROM movimiento LIMIT 1;
 
 **Entregable:** `mi-solucion/06-pruebas-negativas.sql` con las 4 pruebas y su resultado.
 
+
+**Verificación:** las cuatro inserciones prohibidas fallan, cada una contra la restricción que anuncia su comentario.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Clientes | 500 |
+| Cuentas | 800 |
+| Movimientos | 27 807 |
+| Reglas de calidad en `OK` | 10 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 7 — Responder las preguntas de negocio
 
@@ -287,6 +313,9 @@ Pistas para las tres más difíciles:
 
 **Entregable:** `mi-solucion/04-consultas-negocio.sql`
 
+
+**Verificación:** PN-07 devuelve **0 filas**: es una consulta de cuadre y el vacío es el aprobado.
+
 ---
 
 ## PASO 8 — Reglas de calidad de datos
@@ -304,6 +333,9 @@ Escribe validaciones que devuelvan **0 filas cuando todo está bien**. Mínimo e
 
 **Entregable:** `mi-solucion/05-calidad-datos.sql`
 
+
+**Verificación:** corre `06-pruebas-negativas.sql` contra **tu** esquema. Las 6 deben quedar en `OK`.
+
 ---
 
 ## PASO 9 — Documentar
@@ -317,6 +349,9 @@ Escribe validaciones que devuelvan **0 filas cuando todo está bien**. Mínimo e
    - ADR-03: signo del movimiento en el catálogo, no en el monto.
 
 **Entregable:** `mi-solucion/07-diccionario-y-adr.md`
+
+
+**Verificación:** cada ADR nombra al menos una alternativa que descartaste y por qué.
 
 ---
 
@@ -357,3 +392,7 @@ Debe reportar `OK` en modelo físico, carga de datos, consultas y calidad.
   ser atributo de la cuenta y pasa a ser atributo del saldo → nace la entidad `SALDO_CUENTA`)*
 - ¿Cómo soportarías **20 millones de movimientos al mes**? → eso es el **caso 04**.
 - ¿Cómo se convierte este modelo OLTP en un modelo analítico? → eso es el **caso 05**.
+
+**Entregable:** `mi-solucion/07-diccionario-y-adr.md` cerrado.
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso01` termina sin fallos.

@@ -224,6 +224,9 @@ COMMENT ON CONSTRAINT ck_cuadre_estado ON cuadre_reporte IS
 -- 7. ÍNDICES
 -- =====================================================================================
 
+-- Busqueda por documento sin el tipo: la consulta del front-office peruano.
+CREATE INDEX ix_reporte_detalle_num_doc ON reporte_detalle (num_doc);
+
 CREATE INDEX ix_reporte_envio_periodo ON reporte_envio (reporte_cod, periodo);
 CREATE INDEX ix_reporte_envio_estado  ON reporte_envio (estado);
 CREATE INDEX ix_reporte_detalle_doc   ON reporte_detalle (tipo_doc_cod, num_doc);

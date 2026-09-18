@@ -134,7 +134,7 @@ requeriría una regla de calidad para detectarlo *después*.
 Baja el umbral de M02 de 80 a 50 y vuelve a ejecutar:
 
 ```sql
-UPDATE regla_match SET umbral_auto = 50 WHERE regla_cod = 'M02-DOC-TIPEO';
+UPDATE cat_regla_match SET umbral_auto = 50 WHERE regla_cod = 'M02-DOC-TIPEO';
 ```
 
 Observa cuántos pares pasan de `REVISION` a `AUTO_MATCH` y cuántos de ellos son homónimos. Ese

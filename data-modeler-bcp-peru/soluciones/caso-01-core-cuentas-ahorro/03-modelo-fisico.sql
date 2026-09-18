@@ -125,6 +125,12 @@ CREATE TABLE cliente (
     es_vigente          BOOLEAN         NOT NULL DEFAULT TRUE,
     fecha_hora_creacion TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     usuario_creacion    VARCHAR(50)     NOT NULL DEFAULT CURRENT_USER,
+    -- El estandar (00-fundamentos/05-estandares-modelado.md, seccion 4) pide CUATRO columnas
+    -- de auditoria, no dos. Las de modificacion faltaban, y sin ellas la pregunta que hace
+    -- auditoria interna -- "quien toco este dato y cuando" -- no tiene respuesta.
+    -- Van con DEFAULT o nulables, asi que ningun INSERT existente cambia.
+    fecha_hora_modificacion TIMESTAMP,
+    usuario_modificacion    VARCHAR(50),
     CONSTRAINT pk_cliente           PRIMARY KEY (cliente_id),
     CONSTRAINT uq_cliente_doc       UNIQUE (tipo_doc_cod, num_doc),
     CONSTRAINT fk_cliente_tipo_doc  FOREIGN KEY (tipo_doc_cod) REFERENCES cat_tipo_documento (tipo_doc_cod),
@@ -155,6 +161,13 @@ CREATE TABLE cuenta (
     -- RN-11: el saldo disponible es DERIVADO. Una sola fuente de verdad.
     saldo_disponible    NUMERIC(18,2)   GENERATED ALWAYS AS (saldo_contable - saldo_retenido) STORED,
     fecha_hora_creacion TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion    VARCHAR(50)     NOT NULL DEFAULT CURRENT_USER,
+    -- El estandar (00-fundamentos/05-estandares-modelado.md, seccion 4) pide CUATRO columnas
+    -- de auditoria, no dos. Las de modificacion faltaban, y sin ellas la pregunta que hace
+    -- auditoria interna -- "quien toco este dato y cuando" -- no tiene respuesta.
+    -- Van con DEFAULT o nulables, asi que ningun INSERT existente cambia.
+    fecha_hora_modificacion TIMESTAMP,
+    usuario_modificacion    VARCHAR(50),
     CONSTRAINT pk_cuenta            PRIMARY KEY (cuenta_id),
     CONSTRAINT uq_cuenta_numero     UNIQUE (num_cuenta),
     CONSTRAINT uq_cuenta_cci        UNIQUE (cci),
@@ -207,6 +220,13 @@ CREATE TABLE movimiento (
     es_extorno              BOOLEAN         NOT NULL DEFAULT FALSE,
     movimiento_extornado_id BIGINT,
     fecha_hora_creacion     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion        VARCHAR(50)     NOT NULL DEFAULT CURRENT_USER,
+    -- El estandar (00-fundamentos/05-estandares-modelado.md, seccion 4) pide CUATRO columnas
+    -- de auditoria, no dos. Las de modificacion faltaban, y sin ellas la pregunta que hace
+    -- auditoria interna -- "quien toco este dato y cuando" -- no tiene respuesta.
+    -- Van con DEFAULT o nulables, asi que ningun INSERT existente cambia.
+    fecha_hora_modificacion TIMESTAMP,
+    usuario_modificacion    VARCHAR(50),
     CONSTRAINT pk_movimiento              PRIMARY KEY (movimiento_id),
     CONSTRAINT uq_movimiento_operacion    UNIQUE (num_operacion),
     CONSTRAINT fk_movimiento_cuenta       FOREIGN KEY (cuenta_id)   REFERENCES cuenta (cuenta_id),
@@ -232,6 +252,15 @@ COMMENT ON COLUMN movimiento.fecha_contable IS 'A qué día se imputa contableme
 -- 4. ÍNDICES DE ACCESO
 --    Criterio: FK + patrones de consulta reales. No sobre-indexar tabla de escritura intensiva.
 -- =====================================================================================
+
+
+-- BUSQUEDA POR DOCUMENTO SIN EL TIPO
+-- `UNIQUE (tipo_doc_cod, num_doc)` es la llave correcta, pero NO sirve para buscar solo por
+-- numero: un indice compuesto solo se usa desde su primera columna. Y buscar por DNI a secas
+-- es LA consulta del front-office peruano: ventanilla, centro de contacto, cruce con RENIEC,
+-- cruce con centrales de riesgo. Sin este indice, cada una de esas busquedas es un seq scan
+-- sobre la tabla de clientes.
+CREATE INDEX ix_cliente_num_doc ON cliente (num_doc);
 
 CREATE INDEX ix_cliente_ubigeo          ON cliente (ubigeo);
 CREATE INDEX ix_cuenta_producto         ON cuenta (producto_id);

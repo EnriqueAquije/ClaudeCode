@@ -22,6 +22,7 @@
 | **Reglas en `FALLA`** | **0** |
 | **Pruebas negativas rechazadas** | **62** |
 | **Operaciones prohibidas aceptadas** | **0** |
+| **Reglas del estándar cumplidas** | **12** |
 | **Cifras documentadas verificadas** | **71** |
 | **Cifras que no coinciden** | **0** |
 | **Errores de PostgreSQL** | **0** |

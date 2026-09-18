@@ -217,6 +217,15 @@ COMMENT ON CONSTRAINT ck_estado_cuenta_cuadre ON estado_cuenta IS
 -- 3. ÍNDICES
 -- =====================================================================================
 
+
+-- BUSQUEDA POR DOCUMENTO SIN EL TIPO
+-- `UNIQUE (tipo_doc_cod, num_doc)` es la llave correcta, pero NO sirve para buscar solo por
+-- numero: un indice compuesto solo se usa desde su primera columna. Y buscar por DNI a secas
+-- es LA consulta del front-office peruano: ventanilla, centro de contacto, cruce con RENIEC,
+-- cruce con centrales de riesgo. Sin este indice, cada una de esas busquedas es un seq scan
+-- sobre la tabla de clientes.
+CREATE INDEX ix_titular_num_doc ON titular (num_doc);
+
 CREATE INDEX ix_trx_cuenta_periodo ON transaccion (cuenta_tj_id, periodo_cargo);
 CREATE INDEX ix_trx_fecha          ON transaccion (fecha_proceso);
 CREATE INDEX ix_trx_rubro          ON transaccion (rubro_cod);

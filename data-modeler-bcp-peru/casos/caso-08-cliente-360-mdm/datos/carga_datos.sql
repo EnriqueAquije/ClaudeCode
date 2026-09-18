@@ -36,7 +36,7 @@ BEGIN
 END $$;
 
 TRUNCATE cliente_xref, cliente_maestro_linaje, cliente_maestro, match_candidato,
-         regla_supervivencia, regla_match, calidad_registro, cliente_fuente, cat_fuente
+         regla_supervivencia, cat_regla_match, calidad_registro, cliente_fuente, cat_fuente
 RESTART IDENTITY CASCADE;
 
 -- =====================================================================================
@@ -197,7 +197,7 @@ CROSS JOIN LATERAL (
 -- 4. REGLAS DE MATCHING
 -- =====================================================================================
 
-INSERT INTO regla_match (regla_cod, regla_nombre, tipo_match, descripcion,
+INSERT INTO cat_regla_match (regla_cod, regla_nombre, tipo_match, descripcion,
                          score_asignado, umbral_auto) VALUES
     ('M01-DOC-EXACTO', 'Documento idéntico', 'DETERMINISTA',
      'Mismo tipo y número de documento en dos sistemas distintos. Es el match más confiable.',

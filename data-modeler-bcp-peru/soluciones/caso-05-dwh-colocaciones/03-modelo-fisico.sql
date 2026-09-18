@@ -209,6 +209,9 @@ COMMENT ON TABLE fact_colocacion_mes IS
 --    En un modelo estrella se indexan las FK a dimensiones: son el camino de todo JOIN.
 -- =====================================================================================
 
+-- Busqueda por documento sin el tipo: la consulta del front-office peruano.
+CREATE INDEX ix_dim_cliente_num_doc ON dim_cliente (num_doc);
+
 CREATE INDEX ix_fact_mov_tiempo    ON fact_movimiento (tiempo_sk);
 CREATE INDEX ix_fact_mov_cliente   ON fact_movimiento (cliente_sk);
 CREATE INDEX ix_fact_mov_producto  ON fact_movimiento (producto_sk);

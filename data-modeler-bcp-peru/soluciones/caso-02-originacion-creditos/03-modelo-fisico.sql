@@ -289,6 +289,15 @@ COMMENT ON TABLE deudor_clasificacion_mes IS
 -- 4. ÍNDICES
 -- =====================================================================================
 
+
+-- BUSQUEDA POR DOCUMENTO SIN EL TIPO
+-- `UNIQUE (tipo_doc_cod, num_doc)` es la llave correcta, pero NO sirve para buscar solo por
+-- numero: un indice compuesto solo se usa desde su primera columna. Y buscar por DNI a secas
+-- es LA consulta del front-office peruano: ventanilla, centro de contacto, cruce con RENIEC,
+-- cruce con centrales de riesgo. Sin este indice, cada una de esas busquedas es un seq scan
+-- sobre la tabla de clientes.
+CREATE INDEX ix_deudor_num_doc ON deudor (num_doc);
+
 CREATE INDEX ix_solicitud_deudor   ON solicitud_credito (deudor_id);
 CREATE INDEX ix_solicitud_fecha    ON solicitud_credito (fecha_solicitud);
 CREATE INDEX ix_solicitud_estado   ON solicitud_credito (estado_sol_cod);

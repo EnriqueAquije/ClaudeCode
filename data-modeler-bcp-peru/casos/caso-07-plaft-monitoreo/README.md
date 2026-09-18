@@ -35,6 +35,11 @@
 
 **Regla del caso:** todo lo que una resolución pueda cambiar el año que viene **es un dato**.
 
+
+**Entregable:** `mi-solucion/00-lectura-normativa.md` con los umbrales y su base legal.
+
+**Verificación:** ningún umbral aparece escrito a mano en tu modelo. Búscalos: si están en un `CHECK`, no son parámetros.
+
 ---
 
 ## PASO 2 — El motor de reglas como datos
@@ -70,6 +75,11 @@ excepción **justificada y documentada** a la regla de "modela cada atributo".
 > **Cuándo `JSONB` es correcto:** cuando la estructura varía legítimamente por fila y el conjunto de
 > claves no es estable. **Cuándo no:** cuando lo usas para no pensar el modelo. Si `JSONB` guarda
 > siempre las mismas cinco claves, esas cinco claves son columnas.
+
+
+**Entregable:** `mi-solucion/02-modelo-logico.md` con el catálogo de reglas.
+
+**Verificación:** puedes añadir una regla nueva **sin tocar una sola línea de código**.
 
 ---
 
@@ -115,6 +125,11 @@ WHERE suma_ventana  >= umbral      -- juntas superan el umbral
 también una alerta de fraccionamiento, duplicando el trabajo del analista y arruinando las
 estadísticas de la regla. Por eso existe **CAL-07**.
 
+
+**Entregable:** Tu consulta de detección de fraccionamiento.
+
+**Verificación:** tu consulta exige que **ninguna** operación de la ventana supere el umbral por sí sola. Sin esa condición no es fraccionamiento: son operaciones grandes.
+
 ---
 
 ## PASO 4 — Perfil esperado vs. comportamiento real
@@ -135,6 +150,11 @@ flowchart LR
 **actualiza** — no se sobrescribe. Hay que poder responder "¿contra qué perfil se evaluó la alerta
 de agosto?", y esa respuesta no puede cambiar porque en octubre se actualizó el perfil.
 
+
+**Entregable:** Tu modelo de perfil esperado.
+
+**Verificación:** el perfil tiene vigencia. Si es una columna del cliente, no puedes comparar contra el perfil de hace seis meses.
+
 ---
 
 ## PASO 5 — La evidencia de la alerta
@@ -153,6 +173,11 @@ JSONB_BUILD_OBJECT(
 
 Con eso el analista **reconstruye el razonamiento** sin ejecutar consultas. Y CAL-15 verifica que
 ninguna alerta llegue con evidencia vacía.
+
+
+**Entregable:** Tu diseño de la evidencia de la alerta.
+
+**Verificación:** un analista puede reconstruir **por qué** se disparó una alerta sin volver a ejecutar la regla.
 
 ---
 
@@ -196,6 +221,11 @@ CREATE TABLE bitacora_acceso_ros (
 > Ante una revisión, la pregunta no es "¿quién debería poder ver el ROS?" sino **"demuéstreme quién
 > lo vio"**. La bitácora es la respuesta.
 
+
+**Entregable:** Tu implementación del deber de reserva.
+
+**Verificación:** `SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname='ros'` devuelve **true en ambas**. Con la segunda en false, el control no existe.
+
 ---
 
 ## PASO 7 — Cargar y ejecutar el motor
@@ -230,7 +260,32 @@ VALUES (1, DATE '2026-01-01', 5000, 20000, 10, 'BAJO', DATE '2026-01-01');
 UPDATE alerta SET severidad = 9 WHERE alerta_id = (SELECT MIN(alerta_id) FROM alerta);
 ```
 
+
+**Entregable:** Salida de la carga y del motor.
+
+**Verificación:** las cinco reglas generan alertas. Si una genera cero, o está mal escrita o tus datos no contienen el patrón.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Clientes monitoreados | 800 |
+| Operaciones | 27 666 |
+| Registro de Operaciones | 59 |
+| Alertas | 235 (59 / 21 / 126 / 15 / 14 por regla) |
+| Casos de investigación | 29 |
+| ROS | 3 |
+| Reglas de calidad en `OK` | 16 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 8 — Consultas de negocio
 
@@ -243,6 +298,11 @@ Las tres que más enseñan:
   entregable que el analista adjunta al expediente.
 - **PN-10 (deber de reserva).** Consulta `pg_policy` e `information_schema.table_privileges` para
   **demostrar** quién puede ver qué. Es lo que se presenta en una revisión.
+
+
+**Entregable:** `mi-solucion/05-consultas-negocio.sql`
+
+**Verificación:** ninguna consulta devuelve vacío.
 
 ---
 
@@ -258,6 +318,11 @@ Las específicas:
 | CAL-11 | Todo ROS tiene bitácora | Exigible en una revisión |
 | CAL-13 | Todo PEP tiene riesgo ALTO | Debida diligencia reforzada |
 | CAL-14 | La tabla ROS tiene RLS activa | El control técnico del deber de reserva |
+
+
+**Entregable:** `mi-solucion/05-calidad-datos.sql`
+
+**Verificación:** corre `06-pruebas-negativas.sql`. Las 6 deben quedar en `OK`.
 
 ---
 
@@ -285,3 +350,7 @@ RLS en lugar de control en la aplicación.
 - **Retención.** La información PLAFT tiene plazos de conservación largos. ¿Cómo se concilia con el
   derecho de cancelación de la Ley 29733? *(pista: hay una obligación legal que prevalece — pero
   debe estar documentada en el modelo)*
+
+**Entregable:** `mi-solucion/08-adr.md`
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso07` termina sin fallos.

@@ -66,6 +66,11 @@ flowchart TD
 
 *(Respuestas: hub, satélite, link, satélite, hub, satélite **de un link**)*
 
+
+**Entregable:** `mi-solucion/01-modelo-conceptual.md` clasificando cada concepto en hub, link o satélite.
+
+**Verificación:** ninguna de tus llaves de negocio es un autoincremental. Si lo es, no es una llave de negocio.
+
 ---
 
 ## PASO 2 — La clave hash
@@ -98,6 +103,11 @@ $$;
 
 > **MD5 basta.** Se usa por su distribución uniforme, no por seguridad. Si tu política prohíbe MD5,
 > usa SHA-256 y ajusta a `CHAR(64)`: el modelo no cambia.
+
+
+**Entregable:** Tu función de clave hash, **una sola**.
+
+**Verificación:** dos procesos distintos que hashean el mismo documento obtienen la misma clave. Con dos implementaciones, no.
 
 ---
 
@@ -134,6 +144,11 @@ WHERE     v.hash_diff IS DISTINCT FROM c.hd;      -- <<< SOLO SI CAMBIÓ
 | `sat_persona_ingreso` | 1 500 | **500** | Solo cambió el ingreso de 1 de cada 3 |
 | `sat_persona_demografia` | 1 500 | **1 500** | Todos cumplieron un año más |
 
+
+**Entregable:** Tu diseño de satélites con `hash_diff`.
+
+**Verificación:** usaste `IS DISTINCT FROM` y no `<>`. Con `<>`, la primera carga no inserta nada por culpa de los nulos.
+
 ---
 
 ## PASO 4 — Separar satélites con criterio
@@ -148,6 +163,11 @@ Un hub puede tener **varios satélites**. Se separan por tres criterios:
 
 > Meter todo en un satélite obliga a insertar la fila completa cuando cambia un solo campo, y hace
 > imposible dar acceso al dato demográfico sin dar acceso al ingreso.
+
+
+**Entregable:** `mi-solucion/02-modelo-logico.md` justificando cada separación.
+
+**Verificación:** cada satélite se justifica por sensibilidad, ritmo de cambio o fuente. "Por comodidad" no es criterio.
 
 ---
 
@@ -180,6 +200,11 @@ simplemente no tienen filas en ese satélite — que es exactamente la verdad: e
 > **Este es el argumento del Data Vault**, y solo se aprecia cuando se ve funcionando. Ejecuta la
 > ola 2026 y comprueba que ninguna tabla anterior se tocó.
 
+
+**Entregable:** `mi-solucion/05-ola-2026.md` con lo que hubo que cambiar.
+
+**Verificación:** absorbiste atributos nuevos **sin `ALTER TABLE`** sobre nada existente. Ese es el argumento entero del Data Vault.
+
 ---
 
 ## PASO 6 — Cargar las dos olas
@@ -198,7 +223,30 @@ Resultado esperado:
 | `sat_persona_ingreso` | 2 000 | 1 500 + **500**: solo cambiaron algunos |
 | `sat_persona_canal_digital` | 1 600 | Satélite **nuevo** de la ola 2026 |
 
+
+**Entregable:** Salida de las dos cargas.
+
+**Verificación:** el satélite de ingreso creció mucho menos que el de demografía. Si crecieron igual, tu `hash_diff` no está filtrando.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| `hub_persona` | 1 600 |
+| `sat_persona_demografia` | 3 000 (todos cumplieron un año) |
+| `sat_persona_ingreso` | 2 000 (solo cambió 1 de cada 3) |
+| `sat_persona_canal_digital` | 1 600 (satélite nuevo de la ola 2026) |
+| Reglas de calidad en `OK` | 16 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 7 — Viaje en el tiempo
 
@@ -217,6 +265,11 @@ LEFT JOIN   sat_persona_ingreso i ON i.persona_hk = h.persona_hk
 
 **Reconstruye el informe publicado el año pasado, sin reprocesar nada.** Porque la historia nunca
 se borró.
+
+
+**Entregable:** `mi-solucion/07-viaje-tiempo.sql`
+
+**Verificación:** reconstruyes la foto de una persona a una fecha pasada con una sola consulta.
 
 ---
 
@@ -243,6 +296,11 @@ flowchart LR
     style C fill:#fff3e0,stroke:#e65100
 ```
 
+
+**Entregable:** Tu capa de vistas.
+
+**Verificación:** cuenta los `JOIN` que necesita un usuario final. Si son más de uno, no terminaste la capa de entrega.
+
 ---
 
 ## PASO 9 — Calidad (16 reglas)
@@ -260,6 +318,11 @@ Las específicas de la metodología:
 > CAL-07 y CAL-08 son inusuales: **validan el diseño, no los datos**. Consultan el catálogo del
 > sistema para verificar que nadie agregó una columna descriptiva a un hub. Es una idea que vale la
 > pena copiar a otros modelos.
+
+
+**Entregable:** `mi-solucion/06-calidad-datos.sql`
+
+**Verificación:** corre `06-pruebas-negativas.sql`. Las 6 deben quedar en `OK`.
 
 ---
 
@@ -301,3 +364,7 @@ modelo estrella como capa de consumo (rápida para el negocio). **No compiten: s
 - **Automatización.** El código de carga de Data Vault es tan repetitivo que suele generarse a
   partir de metadatos. Escribe un generador que produzca el SQL de un satélite a partir de su
   definición.
+
+**Entregable:** `mi-solucion/09-adr.md`
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso09` termina sin fallos.

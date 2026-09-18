@@ -47,6 +47,9 @@ retroactivos) y porque deducirla en cada consulta es lento y propenso a error.
 
 **Entregable:** `mi-solucion/00-supuestos.md` con la línea de tiempo y tus respuestas.
 
+
+**Verificación:** sabes decir en qué ciclo cae una compra hecha el día del cierre. Si dudas, tu definición tiene un hueco.
+
 ---
 
 ## PASO 2 — Modelo conceptual
@@ -71,6 +74,11 @@ erDiagram
 - ¿`ESTADO_CUENTA` y `CICLO` son la misma entidad? *(pista: el ciclo define **cuándo**; el estado de
   cuenta guarda **cuánto**. Se pueden fusionar, pero separarlos permite tener el ciclo abierto antes
   de emitir el estado)*
+
+
+**Entregable:** `mi-solucion/01-modelo-conceptual.md`
+
+**Verificación:** tu diagrama distingue *transacción* de *cuota de transacción*. Si son la misma entidad, vuelve atrás.
 
 ---
 
@@ -110,6 +118,11 @@ CHECK (monto_cuota = monto_capital + monto_interes)
 CHECK (dia_facturacion BETWEEN 1 AND 28)
 ```
 
+
+**Entregable:** `mi-solucion/02-modelo-logico.md` con la restricción de cuadre declarada.
+
+**Verificación:** sabes explicar qué descuadre **no** cubre ese `CHECK`. Si crees que los cubre todos, relee el ADR-01.
+
 ---
 
 ## PASO 4 — Modelo físico y protección del PAN
@@ -132,6 +145,9 @@ SELECT COUNT(*) FROM plastico WHERE num_plastico_enmasc !~ '\*';
 ```
 
 **Entregable:** `mi-solucion/03-modelo-fisico.sql`
+
+
+**Verificación:** busca en tu DDL una columna de 16 o más caracteres para el número de tarjeta. No debería existir.
 
 ---
 
@@ -176,6 +192,11 @@ WITH RECURSIVE cadena AS (
 | Paga el mínimo | 10 % | 0.05 | Sí |
 | Incumplidor | 10 % | 0 ó 0.10 | Sí |
 
+
+**Entregable:** `mi-solucion/03-modelo-fisico.sql` o un `.sql` aparte con la CTE recursiva.
+
+**Verificación:** el saldo final de un ciclo es el saldo inicial del siguiente, sin excepción.
+
 ---
 
 ## PASO 6 — Las compras en cuotas
@@ -209,6 +230,11 @@ GROUP  BY periodo_cargo;
 Si hubieras cargado la compra completa en un solo ciclo, esta pregunta —que es la que hace el área
 financiera para proyectar ingresos— **no tendría respuesta**.
 
+
+**Entregable:** Tu modelo de compras en cuotas.
+
+**Verificación:** la suma de las cuotas de una compra es igual al importe de la compra, al céntimo.
+
 ---
 
 ## PASO 7 — Cargar y verificar
@@ -241,7 +267,33 @@ VALUES (1, '411111******9999   ', 'TITULAR', 'PRUEBA', DATE '2026-01-01', DATE '
 UPDATE estado_cuenta SET pago_minimo = saldo_actual + 1 WHERE cuenta_tj_id = 1;
 ```
 
+
+**Entregable:** Salida de la carga.
+
+**Verificación:** las cifras coinciden con el *Resultado esperado* de esta guía.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Titulares | 350 |
+| Cuentas de tarjeta | 400 |
+| Plásticos | 500 |
+| Ciclos | 2 400 |
+| Transacciones | 23 872 |
+| Cuotas | 12 966 |
+| Estados de cuenta | 2 400 |
+| Reglas de calidad en `OK` | 13 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 8 — Consultas y calidad
 
@@ -254,12 +306,22 @@ Resuelve PN-01 a PN-10 y las 13 reglas CAL. Las tres más instructivas:
   verificaciones distintas y **ambas son necesarias**.
 - **CAL-11 (PAN enmascarado):** una regla de **seguridad** verificada como regla de calidad.
 
+
+**Entregable:** `mi-solucion/04-consultas-negocio.sql` y `05-calidad-datos.sql`.
+
+**Verificación:** PN-08 devuelve **0 filas**: es una consulta de cuadre y el vacío es el aprobado.
+
 ---
 
 ## PASO 9 — Documentar
 
 Diccionario con sensibilidad, ADR (mínimo: ciclo explícito vs. derivado; cuotas como plan vs. cargo
 único; cuadre como `CHECK` vs. proceso) y matriz source-to-target.
+
+
+**Entregable:** `mi-solucion/08-adr.md`
+
+**Verificación:** cada ADR nombra al menos una alternativa que descartaste y por qué.
 
 ---
 
@@ -280,3 +342,5 @@ Diccionario con sensibilidad, ADR (mínimo: ciclo explícito vs. derivado; cuota
 - **Extornos y contracargos:** el catálogo ya tiene el tipo `EXT`. Modela el flujo completo de una
   disputa: reclamo → contracargo provisional → resolución.
 - **Programa de puntos:** ¿cómo modelarías la acumulación y el canje sin romper el cuadre?
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso03` termina sin fallos.

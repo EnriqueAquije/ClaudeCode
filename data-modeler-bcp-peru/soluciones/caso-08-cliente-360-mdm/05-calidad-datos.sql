@@ -83,7 +83,7 @@ WITH resultados AS (
     UNION ALL
     SELECT 'CAL-08', 'Matching', 'Ningun AUTO_MATCH por debajo del umbral de su regla',
            (SELECT COUNT(*) FROM match_candidato mc
-            JOIN regla_match rm ON rm.regla_cod = mc.regla_cod
+            JOIN cat_regla_match rm ON rm.regla_cod = mc.regla_cod
             WHERE mc.decision = 'AUTO_MATCH' AND mc.score < rm.umbral_auto)
     UNION ALL
     SELECT 'CAL-09', 'Matching', 'Los candidatos en REVISION NO fueron fusionados',

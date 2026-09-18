@@ -65,6 +65,11 @@ Respuestas de la solución:
 **Regla:** el grano se declara **en una frase**, empezando por "una fila representa…". Si no puedes
 completar esa frase sin usar "o", tu grano está mal definido.
 
+
+**Entregable:** `mi-solucion/00-grano.md` con una frase por tabla de hechos: "una fila = …".
+
+**Verificación:** cada atributo de la fila depende del grano completo. Si uno no depende, el grano está mal.
+
 ---
 
 ## PASO 2 — Los tres tipos de tabla de hechos
@@ -86,6 +91,11 @@ completar esa frase sin usar "o", tu grano está mal definido.
 > **Ejercicio obligatorio:** en tu diccionario, marca cada medida con su tipo de aditividad. Es la
 > documentación que evita que un tablero muestre "el saldo del banco" sumando seis meses del mismo
 > dinero — el error de PN-08.
+
+
+**Entregable:** `mi-solucion/00-grano.md` ampliado con el tipo de cada hecho y por qué.
+
+**Verificación:** sabes decir cuál de tus medidas es semiaditiva y qué pasa si alguien la suma entre meses.
 
 ---
 
@@ -128,6 +138,11 @@ Y luego se vigila:
 SELECT COUNT(*) FROM fact_movimiento WHERE cliente_sk = -1;
 ```
 
+
+**Entregable:** `mi-solucion/01-modelo-conceptual.md` con la matriz de bus.
+
+**Verificación:** todas tus dimensiones tienen fila de miembro desconocido. Cuéntalas: deben ser todas.
+
 ---
 
 ## PASO 4 — SCD tipo 2 y el error más caro del modelado analítico
@@ -169,6 +184,11 @@ es exactamente el tamaño del error que estarías cometiendo.
 | Sin vigencias solapadas | Auto-join comparando rangos (CAL-03) |
 | Sin huecos en la cadena | `LEAD(fecha_desde) = fecha_hasta + 1` (CAL-04) |
 
+
+**Entregable:** `mi-solucion/02-modelo-logico.md` con el diseño del SCD2.
+
+**Verificación:** un hecho de marzo apunta a la versión del cliente **vigente en marzo**, no a la de hoy. Compruébalo con una consulta.
+
 ---
 
 ## PASO 5 — Dimensión conformada
@@ -188,6 +208,11 @@ conformadas, esa pregunta requiere un proyecto de reconciliación cada vez que s
 
 > **Definición:** una dimensión es *conformada* cuando **el mismo significado y las mismas claves**
 > sirven a varios procesos de negocio. Es el mecanismo que evita los "silos de datos".
+
+
+**Entregable:** Tu `dim_producto` conformada.
+
+**Verificación:** la misma dimensión sirve a captaciones y colocaciones sin duplicarse.
 
 ---
 
@@ -227,6 +252,11 @@ END $$;
    movimiento de cada cuenta en cada mes — no con `MAX(saldo)`, que daría el saldo más alto, no el
    último.
 
+
+**Entregable:** `mi-solucion/06-etl.sql`
+
+**Verificación:** tu ETL falla ruidosamente si el origen está vacío, en vez de cargar cero filas en silencio.
+
 ---
 
 ## PASO 7 — Cargar y cuadrar
@@ -242,7 +272,30 @@ y en monto, para los dos procesos.
 > Un almacén que no cuadra con el origen es peor que no tener almacén: genera decisiones basadas en
 > cifras que nadie puede defender ante una auditoría.
 
+
+**Entregable:** Salida de la carga con el cuadre contra el origen.
+
+**Verificación:** el número de filas del hecho coincide con el del origen. Si no, colapsaste el grano.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| `dim_cliente` | 1 501 (100 son versión 2 del SCD2) |
+| `fact_movimiento` | 27 807 |
+| `fact_colocacion_mes` | 2 795 |
+| `fact_saldo_captacion_mes` | 3 188 |
+| Reglas de calidad en `OK` | 17 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 8 — Consultas y calidad
 
@@ -252,6 +305,11 @@ Resuelve PN-01 a PN-10 y las 16 reglas CAL. Presta atención especial a:
   alguien proponga "simplificar" el SCD2.
 - **PN-08**: las tres cifras. Solo dos tienen significado.
 - **CAL-05/06/07**: los cuadres contra el origen. Deben ser exactos, no aproximados.
+
+
+**Entregable:** `mi-solucion/04-consultas-negocio.sql` y `05-calidad-datos.sql`.
+
+**Verificación:** corre `06-pruebas-negativas.sql`. Las 6 deben quedar en `OK`.
 
 ---
 
@@ -269,6 +327,11 @@ JOIN dim_tiempo t ... JOIN dim_producto p ... ;
 
 Conéctale **Metabase** o **Superset** (ambos gratuitos) y construye un tablero. Si un usuario de
 negocio puede armar su propio reporte sin ayuda, el modelo dimensional cumplió su propósito.
+
+
+**Entregable:** Tu capa de vistas.
+
+**Verificación:** un usuario de negocio responde PN-01 **sin escribir un solo `JOIN`**.
 
 ---
 
@@ -294,3 +357,7 @@ grano elegido, SCD2 vs SCD1, dimensión conformada, miembro desconocido.
 - **Hecho sin hechos (factless):** modela "clientes contactados por campaña" — no hay medida, solo
   la ocurrencia de la relación.
 - **Data Vault:** el caso 09 muestra el enfoque alternativo para la capa integrada.
+
+**Entregable:** `mi-solucion/08-adr.md`
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso05` termina sin fallos.

@@ -421,6 +421,39 @@ if [ $# -eq 0 ] && [ "${N_FALLIDOS}" -eq 0 ] && [ "${MODO_MI_SOLUCION}" -eq 0 ];
 fi
 
 # =====================================================================================
+#  Cumplimiento del estandar de modelado
+# =====================================================================================
+
+TOTAL_EST=0
+EST_FALLA=0
+
+if [ $# -eq 0 ] && [ "${N_FALLIDOS}" -eq 0 ] && [ "${MODO_MI_SOLUCION}" -eq 0 ]; then
+    titulo "CUMPLIMIENTO DEL ESTÁNDAR DE MODELADO"
+    echo "  El repositorio publica un estándar en 00-fundamentos/05-estandares-modelado.md."
+    echo "  Un estándar que nadie comprueba se vuelve decoración, y enseña lo contrario de"
+    echo "  lo que pretende: que las convenciones son opcionales."
+    echo ""
+    LOG_EST="${SALIDA}/estandares.log"
+    printf '  %-28s' "verificando"
+    if ejecutar_sql "${RAIZ}/validacion/estandares.sql" "${LOG_EST}"; then
+        TOTAL_EST=$(grep -cE '\| OK *$'    "${LOG_EST}" || true)
+        EST_FALLA=$(grep -cE '\| FALLA *$' "${LOG_EST}" || true)
+        if [ "${EST_FALLA}" -gt 0 ]; then
+            echo "${ROJO}${EST_FALLA} REGLA(S) DEL ESTÁNDAR INCUMPLIDA(S)${FIN}"
+            grep -E '\| FALLA *$' "${LOG_EST}" | sed 's/^/      /'
+            FALLIDOS+=("estandares")
+            N_FALLIDOS=$((N_FALLIDOS + 1))
+        else
+            echo "${VERDE}${TOTAL_EST} reglas del estándar cumplidas${FIN}"
+        fi
+    else
+        echo "${ROJO}ERROR${FIN}"
+        tail -n 12 "${LOG_EST}" | sed 's/^/      /'
+        FALLIDOS+=("estandares"); N_FALLIDOS=$((N_FALLIDOS + 1))
+    fi
+fi
+
+# =====================================================================================
 #  Resumen
 # =====================================================================================
 
@@ -431,6 +464,9 @@ echo "  Casos válidos        : $(( N_CASOS - N_FALLIDOS ))"
 echo "  Reglas de calidad OK : ${TOTAL_OK}"
 echo "  Reglas en FALLA      : ${TOTAL_FALLA}"
 echo "  Pruebas negativas    : ${TOTAL_NEG} rechazadas, ${TOTAL_NEG_FALLA} aceptadas indebidamente"
+if [ "${TOTAL_EST}" -gt 0 ] || [ "${EST_FALLA}" -gt 0 ]; then
+    echo "  Estándar de modelado : ${TOTAL_EST} cumplidas, ${EST_FALLA} incumplidas"
+fi
 if [ "${TOTAL_CIFRAS}" -gt 0 ] || [ "${CIFRAS_FALLA}" -gt 0 ]; then
     echo "  Cifras documentadas  : ${TOTAL_CIFRAS} verificadas, ${CIFRAS_FALLA} en FALLA"
 fi

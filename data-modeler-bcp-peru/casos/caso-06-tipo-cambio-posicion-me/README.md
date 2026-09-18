@@ -38,6 +38,11 @@ banco.
 > Esa diferencia es la razón de ser de `cat_tipo_cambio`. Un modelo con una sola columna
 > `tipo_cambio` obliga a cada área a elegir por su cuenta, y **cada una elige distinto**.
 
+
+**Entregable:** `mi-solucion/00-analisis.md` enumerando cuántos tipos de cambio distintos existen y para qué sirve cada uno.
+
+**Verificación:** sabes cuál usarías para valorizar un balance y cuál para una operación de ventanilla, y por qué no son el mismo.
+
 ---
 
 ## PASO 2 — La decisión central: dos tablas, no una
@@ -61,6 +66,11 @@ flowchart LR
 
 **Por qué no una sola tabla con los huecos rellenados:** porque perderías la respuesta a la primera
 pregunta. Y esa es exactamente la que te hace el auditor.
+
+
+**Entregable:** `mi-solucion/01-modelo-conceptual.md` con las dos entidades separadas.
+
+**Verificación:** puedes responder "¿cuánto valía el dólar el domingo?" y "¿el BCRP publicó algo el domingo?" con dos consultas distintas.
 
 ---
 
@@ -93,6 +103,11 @@ CREATE TABLE cat_calendario (
 <https://www.gob.pe/>): Año Nuevo, Jueves y Viernes Santo, Día del Trabajo, San Pedro y San Pablo,
 Día de la Fuerza Aérea, Fiestas Patrias (28 y 29 de julio), Batalla de Junín, Santa Rosa de Lima,
 Combate de Angamos, Todos los Santos, Inmaculada Concepción, Batalla de Ayacucho y Navidad.
+
+
+**Entregable:** Tu tabla de calendario.
+
+**Verificación:** los 365 días del año existen como fila, incluidos los que no son hábiles.
 
 ---
 
@@ -161,6 +176,11 @@ CHECK ((origen_valor = 'PUBLICADO' AND dias_arrastre = 0 AND fecha_cotizacion = 
 > nunca existió en el mercado. En banca se arrastra el último precio conocido — y se deja
 > constancia de que se arrastró.
 
+
+**Entregable:** `mi-solucion/04-locf.sql` con la consulta completa y ejecutable.
+
+**Verificación:** ningún día del año queda sin valor vigente, y cada valor arrastrado sabe cuántos días lleva arrastrándose.
+
 ---
 
 ## PASO 5 — Una sola implementación de la conversión
@@ -184,6 +204,11 @@ $$;
    `PEN→PEN` en la tabla.
 3. **Devuelve `NULL` si no hay tipo de cambio.** Un `NULL` es visible y hace fallar el reporte; un
    `0` silencioso descuadra el balance sin que nadie lo note.
+
+
+**Entregable:** Tu función de conversión.
+
+**Verificación:** invócala **desde otro esquema**. Si falla, no calificaste las tablas.
 
 ---
 
@@ -221,7 +246,32 @@ INSERT INTO posicion_cambio_dia (fecha, moneda_cod, activos_me, pasivos_me, posi
 VALUES (DATE '2026-02-02','EUR',100,50,999,3.7,3696.30);
 ```
 
+
+**Entregable:** Salida de la carga.
+
+**Verificación:** las cifras coinciden con el *Resultado esperado* de esta guía.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Días de calendario | 365 (248 hábiles, 15 feriados) |
+| Cotizaciones publicadas | 1 240 |
+| Valores vigentes | 1 820 |
+| De ellos, por arrastre | 580 |
+| Saldos en ME | 2 190 |
+| Posiciones diarias | 728 |
+| Reglas de calidad en `OK` | 15 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 7 — Usar la serie REAL del BCRP (opcional, muy recomendable)
 
@@ -240,6 +290,11 @@ molde para tus datos.
 > ⚠️ Los códigos de serie (`PD04637PD`, etc.) pueden cambiar entre versiones del portal.
 > Verifícalos en la ficha de la serie dentro de BCRPData antes de automatizar la descarga.
 
+
+**Entregable:** `mi-solucion/07-carga-real.md` con lo que pasó al cambiar la fuente.
+
+**Verificación:** el modelo **no cambió ni una línea** y las reglas siguen en `OK`. Ese es el examen del caso.
+
 ---
 
 ## PASO 8 — Consultas de negocio
@@ -247,6 +302,11 @@ molde para tus datos.
 Resuelve PN-01 a PN-10. La más importante es **PN-06**: el mismo saldo valorizado con los cuatro
 tipos de cambio. Esa tabla es el argumento que necesitas cuando alguien proponga "simplificar" y
 dejar una sola columna de tipo de cambio.
+
+
+**Entregable:** `mi-solucion/04-consultas-negocio.sql`
+
+**Verificación:** ninguna consulta devuelve vacío.
 
 ---
 
@@ -264,6 +324,11 @@ Las específicas de este caso:
 
 > **CAL-07 en la práctica:** si alguien carga `37.25` en vez de `3.725`, ninguna restricción de tipo
 > lo detecta — es un número válido. Solo una regla de **razonabilidad** lo atrapa.
+
+
+**Entregable:** `mi-solucion/05-calidad-datos.sql`
+
+**Verificación:** corre `06-pruebas-negativas.sql`. Las 6 deben quedar en `OK`.
 
 ---
 
@@ -289,3 +354,7 @@ conversión; calendario como tabla propia.
   `par_limite_posicion` con vigencia y una regla de calidad que detecte excesos.
 - **Triangulación.** Si tienes USD→PEN y EUR→PEN, ¿cómo obtienes EUR→USD? ¿Lo almacenas o lo
   calculas?
+
+**Entregable:** `mi-solucion/09-adr.md`
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso06` termina sin fallos.

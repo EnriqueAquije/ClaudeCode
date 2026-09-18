@@ -28,7 +28,7 @@ SELECT  mc.regla_cod,
         ROUND(AVG(mc.score), 2)      AS score_promedio,
         rm.umbral_auto
 FROM    match_candidato mc
-JOIN    regla_match     rm ON rm.regla_cod = mc.regla_cod
+JOIN    cat_regla_match     rm ON rm.regla_cod = mc.regla_cod
 GROUP BY mc.regla_cod, rm.regla_nombre, rm.tipo_match, mc.decision, rm.umbral_auto
 ORDER BY mc.regla_cod;
 

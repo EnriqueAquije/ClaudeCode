@@ -338,6 +338,15 @@ COMMENT ON POLICY pol_ros_cumplimiento ON ros IS
 -- 8. ÍNDICES
 -- =====================================================================================
 
+
+-- BUSQUEDA POR DOCUMENTO SIN EL TIPO
+-- `UNIQUE (tipo_doc_cod, num_doc)` es la llave correcta, pero NO sirve para buscar solo por
+-- numero: un indice compuesto solo se usa desde su primera columna. Y buscar por DNI a secas
+-- es LA consulta del front-office peruano: ventanilla, centro de contacto, cruce con RENIEC,
+-- cruce con centrales de riesgo. Sin este indice, cada una de esas busquedas es un seq scan
+-- sobre la tabla de clientes.
+CREATE INDEX ix_cliente_num_doc ON cliente (num_doc);
+
 CREATE INDEX ix_operacion_cliente_fecha ON operacion (cliente_id, fecha_contable);
 CREATE INDEX ix_operacion_fecha         ON operacion (fecha_contable);
 CREATE INDEX ix_operacion_tipo          ON operacion (tipo_op_cod);

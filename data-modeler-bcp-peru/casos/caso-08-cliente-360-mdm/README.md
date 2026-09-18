@@ -53,6 +53,11 @@ CONSTRAINT uq_cat_fuente_prec UNIQUE (precedencia)
 ejecución, y el mismo proceso puede dar resultados distintos en dos corridas. **Los empates se
 resuelven en una reunión, no en la base de datos.**
 
+
+**Entregable:** `mi-solucion/00-precedencia.md` justificando el orden de las seis fuentes.
+
+**Verificación:** no hay dos fuentes con la misma precedencia, y una restricción lo impide.
+
 ---
 
 ## PASO 2 — Conservar los datos crudos
@@ -85,6 +90,11 @@ ALTER TABLE cliente_fuente
             '\s+', ' ', 'g')))
     ) STORED;
 ```
+
+
+**Entregable:** Tu tabla de registros crudos.
+
+**Verificación:** los duplicados y los errores de digitación **siguen ahí**. Si los limpiaste al cargar, destruiste el insumo del caso.
 
 ---
 
@@ -139,6 +149,11 @@ CREATE INDEX ix_cliente_fuente_nombre ON cliente_fuente USING GIN (nombre_normal
 En la solución, M02 además se **restringe a la fuente con errores conocidos** (`CRM`). Acotar el
 espacio de búsqueda con conocimiento del dominio es una decisión de diseño legítima y muy efectiva.
 
+
+**Entregable:** `mi-solucion/03-matching.sql` con tus reglas.
+
+**Verificación:** tu regla de nombre normalizado une "PÉREZ" con "PEREZ". Pruébalo: si no, no quitaste las tildes.
+
 ---
 
 ## PASO 4 — Reglas de supervivencia por atributo
@@ -170,6 +185,11 @@ ORDER BY (f.valor IS NULL), (rc.fuente_cod <> 'PADRON_SUNAT'), rc.precedencia LI
 > **una fuente de alta precedencia sin el dato no gana con un nulo**. Es un detalle pequeño que
 > cambia por completo el resultado.
 
+
+**Entregable:** Tus reglas de supervivencia.
+
+**Verificación:** cada atributo del golden record dice de qué fuente vino y por qué ganó.
+
 ---
 
 ## PASO 5 — El linaje por atributo
@@ -190,6 +210,11 @@ tengo yo en mi sistema?"*
 
 Sin esta tabla, la respuesta es "porque el proceso lo decidió", y el MDM pierde credibilidad la
 primera semana.
+
+
+**Entregable:** Tu tabla de linaje.
+
+**Verificación:** puedes responder "¿de dónde salió el teléfono de este cliente?" con un solo `SELECT`.
 
 ---
 
@@ -213,6 +238,11 @@ golden records.
 El xref es lo que permite **navegar en ambos sentidos**: del maestro a cada sistema, y de cualquier
 sistema al maestro.
 
+
+**Entregable:** Tu tabla de referencia cruzada.
+
+**Verificación:** cada registro de origen apunta a **un solo** maestro, y una restricción lo garantiza.
+
 ---
 
 ## PASO 7 — Cargar y verificar
@@ -235,7 +265,32 @@ Resultado esperado:
 **El cuadre:** `5 407 − 815 = 4 592`, donde 815 son los registros absorbidos por una fusión.
 Si no cuadra, el proceso perdió o duplicó registros.
 
+
+**Entregable:** Salida de la carga.
+
+**Verificación:** hay clientes presentes en tres o más sistemas. Si el máximo es dos, tus fuentes no se solapan y el MDM no tiene nada que consolidar.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Registros en los 6 sistemas | 5 407 |
+| Clientes maestros | 4 592 |
+| Duplicados resueltos automáticamente | 953 |
+| Homónimos a revisión manual | 12 |
+| Clientes en 3 o más sistemas | 212 |
+| Trazas de linaje | 14 082 |
+| Reglas de calidad en `OK` | 16 |
+| Pruebas negativas rechazadas | 6 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 8 — Las consultas que justifican el proyecto
 
@@ -246,6 +301,11 @@ Si no cuadra, el proceso perdió o duplicó registros.
   entregable que se presenta en el comité.
 - **PN-10** cruza productos entre sistemas — **imposible sin MDM**, porque cada sistema usa su
   propio id.
+
+
+**Entregable:** `mi-solucion/06-consultas-negocio.sql`
+
+**Verificación:** PN-08 devuelve clientes multiproducto. Vacío significa que el paso 7 no quedó bien.
 
 ---
 
@@ -260,6 +320,11 @@ Las decisivas:
 | CAL-13 | Cada registro de origen en un solo maestro | RN-12 |
 | CAL-06 | El linaje apunta a un registro del mismo maestro | Detecta linaje corrupto |
 | CAL-07 | La actividad económica viene de SUNAT | Verifica la regla `FUENTE_FIJA` |
+
+
+**Entregable:** `mi-solucion/05-calidad-datos.sql`
+
+**Verificación:** corre `06-pruebas-negativas.sql`. Las 6 deben quedar en `OK`.
 
 ---
 
@@ -287,3 +352,7 @@ umbral de auto-match; homónimos a revisión.
   registros nuevos cada día. ¿Cómo lo haces incremental sin recalcular 5 millones de maestros?
 - **El derecho de cancelación.** Si un cliente pide que borren sus datos (Ley 29733), ¿qué pasa con
   el maestro, con el xref y con el linaje?
+
+**Entregable:** `mi-solucion/09-adr.md`
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso08` termina sin fallos.

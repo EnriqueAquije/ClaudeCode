@@ -37,6 +37,9 @@ de esto para empezar el caso 01.
 > |:-:|:-:|:-:|:-:|:-:|
 > | **10 / 10** | **151** `OK` | **62** rechazadas | **71** | **0** |
 >
+> Más **12 reglas del estándar de modelado**, que comprueban que los esquemas cumplan las
+> convenciones que el propio repositorio publica.
+>
 > Tres cosas distintas, y las tres importan:
 > **las reglas** comprueban que los datos cumplan lo que el negocio exige;
 > **las pruebas negativas** intentan la operación prohibida y exigen que la base la rechace —

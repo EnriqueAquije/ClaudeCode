@@ -51,6 +51,11 @@ CREATE TABLE reporte_campo (
 **El `UNIQUE` sobre la posición** impide dos campos en el mismo lugar del archivo — un error que de
 otro modo solo se descubre cuando el supervisor rechaza el envío.
 
+
+**Entregable:** `mi-solucion/01-definicion-reporte.md` con la estructura campo a campo en forma de tabla.
+
+**Verificación:** ninguna posición ni longitud del archivo aparece en tu código generador.
+
 ---
 
 ## PASO 2 — Versionar la estructura
@@ -71,6 +76,11 @@ Cada envío guarda **qué versión usó**, y una regla verifica la coherencia:
 -- CAL-13: la versión usada estaba vigente a la fecha de corte
 WHERE e.fecha_corte NOT BETWEEN d.fecha_desde AND d.fecha_hasta
 ```
+
+
+**Entregable:** Tu diseño de versionado.
+
+**Verificación:** puedes reproducir un envío de marzo **con la estructura de marzo**, no con la de hoy.
 
 ---
 
@@ -106,6 +116,11 @@ INSERT INTO reporte_validacion (reporte_cod, version, validacion_cod, descripcio
 | `BLOQUEA` | No se envía hasta corregir. **CAL-04 verifica que ningún envío remitido los tenga.** |
 | `ADVIERTE` | Se envía, pero queda registrado. Si el supervisor lo observa, hay evidencia de que se detectó. |
 
+
+**Entregable:** Tu catálogo de validaciones.
+
+**Verificación:** puedes añadir una validación nueva sin desplegar código, y cada una dice qué norma la sustenta.
+
 ---
 
 ## PASO 4 — El linaje campo a campo
@@ -138,6 +153,11 @@ durante una semana.
 
 **CAL-02** verifica que **todos** los campos de la versión vigente tengan linaje.
 
+
+**Entregable:** `mi-solucion/06-linaje.md`
+
+**Verificación:** todo campo de **toda** versión tiene linaje, no solo los de la vigente. Hay envíos remitidos con la anterior.
+
 ---
 
 ## PASO 5 — Generar el reporte desde el origen
@@ -169,6 +189,11 @@ WHERE  t.envio_id = e.envio_id;
 > ⚠️ **El orden importa.** Si corriges el detalle *después* de calcular los totales, el archivo se
 > autocontradice. **CAL-12** lo detecta.
 
+
+**Entregable:** Tu generador del detalle.
+
+**Verificación:** el número de líneas del envío coincide con el número de filas que entrega el origen. Si es menor, dejaste deudores fuera.
+
 ---
 
 ## PASO 6 — El cuadre contable
@@ -180,6 +205,11 @@ CONSTRAINT ck_cuadre_estado CHECK (esta_cuadrado = (ABS(diferencia) <= toleranci
 
 **`esta_cuadrado` no se digita: se deriva.** Si fuera una columna que alguien marca, alguien la
 marcará mal — probablemente el día del cierre, a las once de la noche.
+
+
+**Entregable:** Tu tabla de cuadre.
+
+**Verificación:** `UPDATE cuadre_reporte SET esta_cuadrado = TRUE` sobre una fila descuadrada **falla**. Pruébalo.
 
 ---
 
@@ -239,7 +269,31 @@ WHERE (envio_id, num_linea) = (SELECT envio_id, MIN(num_linea) FROM reporte_deta
 UPDATE cuadre_reporte SET esta_cuadrado = TRUE WHERE NOT esta_cuadrado;
 ```
 
+
+**Entregable:** Salida de la carga.
+
+**Verificación:** el envío de junio queda observado y el rectificatorio cuadra en 0,00, conservando **ambos**.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Envíos | 8 (7 originales + 1 rectificatorio) |
+| Líneas de detalle | 3 212 |
+| Hallazgos del envío observado | 20 |
+| Registros del envío de junio | 417 |
+| Diferencia del rectificatorio | 0,00 |
+| Reglas de calidad en `OK` | 19 |
+| Pruebas negativas rechazadas | 7 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 8 — Generar el archivo de ancho fijo
 
@@ -262,6 +316,11 @@ Las longitudes salen de `reporte_campo`. Si la SBS cambia una longitud, se cambi
 > posición y armando la línea dinámicamente. Es lo que hace un generador de reportes real, y es la
 > diferencia entre un programa por reporte y **un programa para todos los reportes**.
 
+
+**Entregable:** `mi-solucion/04-consultas-negocio.sql` con el generador de ancho fijo.
+
+**Verificación:** cambia una longitud en tu tabla de campos y vuelve a generar. El archivo debe cambiar solo.
+
 ---
 
 ## PASO 9 — Calidad (19 reglas)
@@ -276,6 +335,11 @@ Las decisivas:
 | CAL-14 | Todo envío aceptado cuadra con contabilidad | El cuadre es condición de envío |
 | CAL-02 | Todo campo vigente tiene linaje | Poder responder una observación |
 | CAL-10 | Posiciones correlativas sin huecos | Un archivo con un hueco es ilegible |
+
+
+**Entregable:** `mi-solucion/05-calidad-datos.sql`
+
+**Verificación:** corre `06-pruebas-negativas.sql`. Las 7 deben quedar en `OK`.
 
 ---
 
@@ -301,3 +365,7 @@ rectificatorio regenerado; cuadre derivado.
 - **Firma y acuse.** Modela el acuse de recibo del supervisor y la firma digital del archivo.
 - **Conciliación con el DWH.** Genera el mismo reporte desde el caso 05 y compara: si difieren,
   tienes un problema de datos que el reporte estaba ocultando.
+
+**Entregable:** `mi-solucion/08-adr.md`
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso10` termina sin fallos.

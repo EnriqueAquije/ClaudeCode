@@ -44,6 +44,11 @@ Requisito: haber completado el **caso 01** (catálogos, llaves sustitutas, cuadr
 > La última pregunta es la más importante del caso: **todo lo que pueda cambiar por norma tiene que
 > ser dato, no código.**
 
+
+**Entregable:** `mi-solucion/00-lectura-normativa.md` con los 8 tipos de crédito y las 5 categorías, citando la resolución.
+
+**Verificación:** puedes explicar, sin mirar, qué distingue a un crédito de consumo revolvente de uno no revolvente.
+
 ---
 
 ## PASO 2 — Separar lo estable de lo variable
@@ -69,6 +74,11 @@ Clasifica cada elemento en una de tres cajas:
 | "Un crédito nace de una solicitud" | |
 | "Categorías: Normal, CPP, Deficiente, Dudoso, Pérdida" | |
 
+
+**Entregable:** `mi-solucion/00-lectura-normativa.md` ampliado: qué es estable y qué cambia por resolución.
+
+**Verificación:** cada cosa que hayas marcado como *variable* tiene una fecha de vigencia asociada. Si no la tiene, no es variable: es una constante disfrazada.
+
 ---
 
 ## PASO 3 — Modelo conceptual
@@ -90,6 +100,9 @@ erDiagram
 - ¿La historia de estados es una entidad o un atributo? *(RN-03)*
 
 **Entregable:** `mi-solucion/01-modelo-conceptual.md`
+
+
+**Verificación:** tu diagrama contesta sin ambigüedad de qué cuelga la clasificación mensual. Si dudaste, relee el alineamiento.
 
 ---
 
@@ -128,6 +141,9 @@ par_provision (clasificacion_cod, tiene_garantia, tasa_provision, fecha_desde, f
 atributo? *(pista: ¿cuántas tasas distintas existen para la categoría Dudoso?)*
 
 **Entregable:** `mi-solucion/02-modelo-logico.md`
+
+
+**Verificación:** busca en tu modelo cualquier número de la norma escrito a mano. Si encuentras uno, no aplicaste el patrón.
 
 ---
 
@@ -170,6 +186,9 @@ CONSTRAINT uq_credito_sol UNIQUE (solicitud_id)
 
 **Entregable:** `mi-solucion/03-modelo-fisico.sql`
 
+
+**Verificación:** invoca tu función **desde otro esquema**. Si falla, no calificaste las tablas y solo funciona desde su casa.
+
 ---
 
 ## PASO 6 — El problema del centavo perdido
@@ -199,6 +218,11 @@ HAVING SUM(cu.monto_capital) <> c.monto_desembolsado;   -- debe devolver 0 filas
 
 > Este paso, por sí solo, aparece en entrevistas de banca con más frecuencia que cualquier pregunta
 > teórica sobre formas normales.
+
+
+**Entregable:** `mi-solucion/03-modelo-fisico.sql` con la restricción de cuadre de la cuota.
+
+**Verificación:** intenta insertar una cuota cuyo total no sea la suma de sus partes. Debe fallar.
 
 ---
 
@@ -242,7 +266,32 @@ ROLLBACK;  -- (ejecútalo dentro de una transacción para no alterar los datos d
 **Eso es lo que te van a pedir en un banco real.** Si el modelo está bien hecho, toma 5 minutos; si
 está mal hecho, toma 6 semanas de desarrollo.
 
+
+**Entregable:** Salida de tu carga y del resumen de coherencia.
+
+**Verificación:** el número de clasificaciones mensuales coincide con deudores × periodos con crédito vivo, no con deudores a secas.
+
 ---
+
+### Resultado esperado
+
+Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar estas mismas cifras.
+
+| Qué | Cuánto |
+|---|---:|
+| Deudores | 900 |
+| Solicitudes | 1 400 |
+| Créditos | 700 |
+| Cuotas | 20 400 |
+| Filas de snapshot mensual | 2 795 |
+| De ellas, empeoradas por alineamiento | 172 |
+| Reglas de calidad en `OK` | 14 |
+| Pruebas negativas rechazadas | 7 |
+
+**Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
+el generador y olvidaste revertirlo · te saltaste un prerrequisito. Compruébalo de golpe con
+`psql -d bcp_lab -f validacion/cifras-documentadas.sql`, que te dice la diferencia cifra por cifra.
+Ver también [problemas comunes](../../00-fundamentos/07-problemas-comunes.md).
 
 ## PASO 8 — Preguntas de negocio
 
@@ -254,6 +303,11 @@ Resuelve PN-01 a PN-10. Las tres difíciles:
   menos una cuota vencida. Cuidado con contar cuotas en vez de créditos.
 - **PN-09 tiempo de ciclo:** necesitas **dos filas de la historia de estados** para el mismo
   trámite. Si guardaste solo el estado actual, esta pregunta es imposible — por eso existe RN-03.
+
+
+**Entregable:** `mi-solucion/04-consultas-negocio.sql` con PN-01 a PN-10.
+
+**Verificación:** ninguna consulta devuelve vacío salvo las que declaran que deben hacerlo.
 
 ---
 
@@ -272,6 +326,11 @@ Mínimo estas, además de las del caso 01:
 > **CAL-08 es la regla que casi nadie escribe.** Un parámetro mal cargado (por ejemplo,
 > CPP 9-30 y Deficiente 32-60) deja **sin clasificación** a los deudores con 31 días de atraso, y el
 > error aparece recién cuando la SBS observa el reporte.
+
+
+**Entregable:** `mi-solucion/05-calidad-datos.sql`
+
+**Verificación:** corre `06-pruebas-negativas.sql` contra **tu** esquema. Las 7 deben quedar en `OK`.
 
 ---
 
@@ -296,3 +355,7 @@ Mínimo estas, además de las del caso 01:
   sin perder la trazabilidad del original?
 - **Garantías**: modela `GARANTIA` (hipotecaria, mobiliaria, fianza) con valor y fecha de tasación,
   y haz que la tasa de provisión dependa del tipo de garantía preferida.
+
+**Entregable:** `mi-solucion/07-adr.md` con tus decisiones.
+
+**Verificación:** `./validacion/validar.sh --mi-solucion caso02` termina sin fallos.

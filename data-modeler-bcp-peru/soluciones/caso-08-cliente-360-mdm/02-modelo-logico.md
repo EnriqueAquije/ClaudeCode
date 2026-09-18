@@ -7,7 +7,7 @@ erDiagram
     cliente_fuente      ||--|| calidad_registro : mide
     cliente_fuente      ||--o{ match_candidato : "compara (a)"
     cliente_fuente      ||--o{ match_candidato : "compara (b)"
-    regla_match         ||--o{ match_candidato : evalua
+    cat_regla_match         ||--o{ match_candidato : evalua
     cliente_fuente      ||--|| cliente_xref : vincula
     cliente_maestro     ||--|{ cliente_xref : agrupa
     cliente_maestro     ||--|{ cliente_maestro_linaje : traza
@@ -46,7 +46,7 @@ erDiagram
         INTEGER  antiguedad_dias
         NUMERIC  score_calidad
     }
-    regla_match {
+    cat_regla_match {
         VARCHAR regla_cod PK
         VARCHAR tipo_match
         NUMERIC score_asignado
