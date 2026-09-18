@@ -6,7 +6,8 @@
 📚 Si te atascas: [glosario](../../00-fundamentos/06-glosario.md) ·
 [estándares de modelado](../../00-fundamentos/05-estandares-modelado.md) ·
 [normativa peruana](../../00-fundamentos/04-normativa-peru.md) ·
-[problemas comunes](../../00-fundamentos/07-problemas-comunes.md)
+[problemas comunes](../../00-fundamentos/07-problemas-comunes.md) ·
+[trazabilidad de reglas](../../00-fundamentos/08-trazabilidad-reglas.md)
 
 ## Herramientas
 

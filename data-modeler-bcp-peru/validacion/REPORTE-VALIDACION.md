@@ -18,7 +18,7 @@
 | **Base de datos** | `bcp_lab` |
 | **Casos ejecutados** | **10 de 10** |
 | **Casos válidos** | **10 de 10** |
-| **Reglas de calidad en `OK`** | **154** |
+| **Reglas de calidad en `OK`** | **159** |
 | **Reglas en `FALLA`** | **0** |
 | **Pruebas negativas rechazadas** | **62** |
 | **Operaciones prohibidas aceptadas** | **0** |
@@ -52,7 +52,7 @@ de calidad**. Basta que una falle para que el caso se marque como fallido.
 | `caso08` | Cliente 360 / MDM | ✅ | ✅ | ✅ | **16 / 16** | 9 | 1 | 37 190 |
 | `caso09` | Data Vault de inclusión financiera | ✅ | ✅ | ✅ | **16 / 16** | 14 | 2 | 24 424 |
 | `caso10` | Reporte regulatorio a la SBS | ✅ | ✅ | ✅ | **17 / 17** | 8 | 2 | 3 076 |
-| | **Total** | | | | **154** | **123** | **16** | **848 188** |
+| | **Total** | | | | **159** | **123** | **16** | **848 188** |
 
 > `caso04` concentra el 71 % de las filas: es la tabla particionada de transferencias, y está así a
 > propósito. Es el único caso donde el volumen es parte de la lección.
@@ -106,7 +106,7 @@ END $$;
 
 ---
 
-## 4. Qué verifican las 154 reglas
+## 4. Qué verifican las 159 reglas
 
 Las reglas no son adorno: cada una defiende una decisión de modelado. Agrupadas por familia:
 
@@ -125,7 +125,7 @@ Las reglas no son adorno: cada una defiende una decisión de modelado. Agrupadas
 | **Razonabilidad** | 4 | Que los valores tengan sentido, no solo que sean válidos | Provisión ≤ saldo; reglas que no alertan a todo el universo |
 | **Matching (MDM)** | 3 | Que la identidad se resuelva de forma determinista | Sin fusiones de homónimos; supervivencia por atributo |
 | **Volumen** | 10 | Que HAYA datos, no solo que los que hay cumplan | Una por caso: es la única que falla sobre una base vacía |
-| | **154** | | |
+| | **159** | | |
 
 **Y dos reglas que validan el diseño en lugar de los datos** (CAL-07 y CAL-08 del `caso09`): consultan
 `information_schema` para verificar que **nadie agregó atributos descriptivos a un hub o a un link**.
@@ -135,7 +135,7 @@ Si alguien lo hace "por comodidad", la validación falla en la siguiente corrida
 
 ## 5. Las pruebas negativas: lo que una regla sobre datos no puede ver
 
-Las 154 reglas comprueban los **datos**. Hay una clase entera de defectos que no pueden detectar, y
+Las 159 reglas comprueban los **datos**. Hay una clase entera de defectos que no pueden detectar, y
 es la que más importa cuando alguien construye su propio modelo.
 
 **El experimento.** Quita `uq_cliente_doc` del DDL del caso 01 y vuelve a correr las reglas:
@@ -307,7 +307,7 @@ diagnóstico.
 - Los datos de los 10 casos se cargan completos y sin violar ninguna restricción.
 - Las **98 preguntas de negocio** devuelven resultados (PN-01 a PN-10 en cada caso; PN-01 a PN-08
   en el `caso01`).
-- Las 154 reglas de calidad pasan.
+- Las 159 reglas de calidad pasan.
 - Las **62 pruebas negativas** son rechazadas por el modelo, como deben.
 - Las **66 cifras citadas en los READMEs** coinciden exactamente con lo que la base produce.
 - Los escenarios narrados en los enunciados **ocurren realmente en los datos**: hay deudores que se

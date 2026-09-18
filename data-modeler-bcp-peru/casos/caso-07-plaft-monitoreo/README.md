@@ -6,7 +6,8 @@
 📚 Si te atascas: [glosario](../../00-fundamentos/06-glosario.md) ·
 [estándares de modelado](../../00-fundamentos/05-estandares-modelado.md) ·
 [normativa peruana](../../00-fundamentos/04-normativa-peru.md) ·
-[problemas comunes](../../00-fundamentos/07-problemas-comunes.md)
+[problemas comunes](../../00-fundamentos/07-problemas-comunes.md) ·
+[trazabilidad de reglas](../../00-fundamentos/08-trazabilidad-reglas.md)
 
 ## Herramientas
 
@@ -279,7 +280,7 @@ Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar
 | Alertas | 235 (59 / 21 / 126 / 15 / 14 por regla) |
 | Casos de investigación | 29 |
 | ROS | 3 |
-| Reglas de calidad en `OK` | 16 |
+| Reglas de calidad en `OK` | 17 |
 | Pruebas negativas rechazadas | 6 |
 
 **Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste
@@ -306,7 +307,7 @@ Las tres que más enseñan:
 
 ---
 
-## PASO 9 — Calidad (16 reglas)
+## PASO 9 — Calidad (17 reglas)
 
 Las específicas:
 

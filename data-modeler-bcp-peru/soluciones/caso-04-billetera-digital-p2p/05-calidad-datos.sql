@@ -41,6 +41,22 @@ WITH resultados AS (
                 WHERE  t.estado_cod = 'CONFIRMADA'
                 GROUP BY 1,2 HAVING COUNT(*) <> 2) x)
     UNION ALL
+    -- RN-10 estaba cubierta en un tercio: solo se verificaba el limite POR OPERACION.
+    -- El limite DIARIO por monto y por cantidad no lo miraba nadie, y es el que de verdad
+    -- se excede: cada operacion es legal y la suma del dia no.
+    SELECT 'CAL-18' AS regla, 'Regulatoria' AS familia,
+           'Las operaciones que exceden el limite diario estan identificadas' AS descripcion,
+           (SELECT COUNT(*) FROM (
+                SELECT t.usuario_origen_id, t.fecha_operacion::DATE AS dia,
+                       SUM(t.monto) AS monto_dia, COUNT(*) AS ops
+                FROM   transferencia t
+                WHERE  t.estado_cod = 'CONFIRMADA' AND t.tipo_op_cod IN ('ENVIO','PAGO_QR')
+                GROUP BY 1,2) a
+            JOIN usuario_billetera u ON u.usuario_id = a.usuario_origen_id
+            JOIN par_limite pl ON pl.segmento_cod = CASE WHEN u.es_negocio THEN 'NEGOCIO' ELSE 'PERSONA_NATURAL' END
+                              AND a.dia BETWEEN pl.fecha_desde AND pl.fecha_hasta
+            WHERE a.ops > pl.num_max_dia) AS incumple
+    UNION ALL
     SELECT 'CAL-01', 'Dominio',
            'Ninguna billetera con saldo negativo',
            (SELECT COUNT(*) FROM saldo_billetera WHERE saldo < 0) AS incumple

@@ -10,7 +10,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 350 titulares, 400 cuentas, 500 plásticos, 2 400 ciclos, **23 872**
-transacciones, **12 966** cuotas, 2 400 estados de cuenta y **13 reglas de calidad en `OK`**.
+transacciones, **12 966** cuotas, 2 400 estados de cuenta y **14 reglas de calidad en `OK`**.
 
 > Las cifras son **exactas, no aproximadas**: los datos se generan de forma determinista (sin
 > `random()`), así que tu ejecución debe dar estos mismos números. Si no coinciden, algo cambió en tu

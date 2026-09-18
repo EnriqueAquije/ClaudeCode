@@ -30,6 +30,40 @@ WITH resultados AS (
            'Hay datos cargados: operaciones monitoreadas' AS descripcion,
            (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM operacion) AS incumple
     UNION ALL
+    -- RN-05 estaba huerfana en el sentido que importa: se auditaba que las alertas emitidas
+    -- estuvieran bien formadas, y NADIE verificaba el falso negativo -- que el fraccionamiento
+    -- presente en las operaciones hubiera generado alerta. En PLAFT el riesgo es lo que NO se
+    -- detecto, no lo que se detecto mal. Esta regla repite la deteccion y exige que no quede
+    -- ningun caso sin su alerta.
+    SELECT 'CAL-17' AS regla, 'Regulatoria' AS familia,
+           'Todo fraccionamiento presente en las operaciones genero alerta' AS descripcion,
+           (WITH ventana AS (
+                SELECT  o.cliente_id, o.fecha_contable,
+                        SUM(o.monto_mn) OVER w AS suma_ventana,
+                        COUNT(*)        OVER w AS ops_ventana,
+                        MAX(o.monto_mn) OVER w AS mayor_ventana
+                FROM    operacion o
+                JOIN    cat_tipo_operacion t ON t.tipo_op_cod = o.tipo_op_cod
+                WHERE   t.es_efectivo
+                WINDOW  w AS (PARTITION BY o.cliente_id ORDER BY o.fecha_contable
+                              RANGE BETWEEN INTERVAL '4 days' PRECEDING AND CURRENT ROW)
+            ),
+            detectado AS (
+                SELECT  v.cliente_id
+                FROM    ventana v
+                JOIN    par_umbral u ON u.umbral_cod = 'FRACC_EFECTIVO'
+                                    AND u.tipo_op_cod = 'DEP_EFEC'
+                                    AND v.fecha_contable BETWEEN u.fecha_desde AND u.fecha_hasta
+                WHERE   v.ops_ventana   >= 3
+                  AND   v.suma_ventana  >  u.monto_umbral
+                  AND   v.mayor_ventana <  u.monto_umbral
+                GROUP BY v.cliente_id
+            )
+            SELECT COUNT(*) FROM detectado d
+            WHERE NOT EXISTS (SELECT 1 FROM alerta a
+                              WHERE a.cliente_id = d.cliente_id
+                                AND a.regla_cod  = 'R02-FRACC')) AS incumple
+    UNION ALL
     SELECT 'CAL-01', 'Regulatoria',
            'Toda operacion del Registro supera efectivamente su umbral',
            (SELECT COUNT(*) FROM registro_operacion WHERE monto_operacion < monto_umbral) AS incumple

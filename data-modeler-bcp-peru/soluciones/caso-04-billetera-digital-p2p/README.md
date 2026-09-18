@@ -10,7 +10,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 3 001 usuarios (3 000 personas + **la cuenta puente del banco**),
-151 500 transferencias (148 700 confirmadas, 2 800 rechazadas), 297 400 movimientos, partición `DEFAULT` vacía y **17 reglas de calidad en `OK`**.
+151 500 transferencias (148 700 confirmadas, 2 800 rechazadas), 297 400 movimientos, partición `DEFAULT` vacía y **18 reglas de calidad en `OK`**.
 
 **Y dos patrones que los datos reproducen a propósito**, porque sin ellos dos preguntas de negocio
 no tendrían respuesta:

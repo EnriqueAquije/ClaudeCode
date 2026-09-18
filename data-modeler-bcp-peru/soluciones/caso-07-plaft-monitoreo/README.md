@@ -10,7 +10,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
 **Resultado esperado:** 800 clientes, 27 666 operaciones, 59 registros en el RO, **235 alertas**,
-21 casos, 2 ROS y **16 reglas de calidad en `OK`**.
+21 casos, 2 ROS y **17 reglas de calidad en `OK`**.
 
 | Regla | Alertas | Severidad |
 |---|---|---|

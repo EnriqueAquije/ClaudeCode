@@ -23,7 +23,7 @@ psql -d bcp_lab -f 04-consultas-negocio.sql
 psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
-**Resultado esperado:** 500 clientes, 800 cuentas, **27 807** movimientos y las 10 reglas de calidad
+**Resultado esperado:** 500 clientes, 800 cuentas, **27 807** movimientos y las 12 reglas de calidad
 en estado `OK`.
 
 > Las cifras son **exactas**: los datos se generan sin `random()`, así que tu ejecución debe dar

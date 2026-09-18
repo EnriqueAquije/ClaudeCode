@@ -85,6 +85,20 @@ WITH resultados AS (
            'Hay datos cargados: movimientos' AS descripcion,
            (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM movimiento) AS incumple
     UNION ALL
+    -- RN-09 estaba HUERFANA, y esta guia lo documentaba sin cubrirla. `ck_movimiento_signo`
+    -- solo verifica la MAGNITUD (ABS(monto_con_signo) = monto); el SENTIDO no se contrastaba
+    -- contra el catalogo. Un deposito guardado con signo de retiro entraba sin resistencia.
+    SELECT 'CAL-10' AS regla, 'Coherencia' AS familia,
+           'El signo del movimiento coincide con el de su tipo en el catalogo' AS descripcion,
+           (SELECT COUNT(*) FROM movimiento m
+            JOIN cat_tipo_movimiento tm ON tm.tipo_mov_cod = m.tipo_mov_cod
+            WHERE m.monto_con_signo <> m.monto * tm.signo) AS incumple
+    UNION ALL
+    SELECT 'CAL-11', 'Coherencia', 'La cuenta y su producto tienen la misma moneda (RN-04)',
+           (SELECT COUNT(*) FROM cuenta c
+            JOIN producto p ON p.producto_id = c.producto_id
+            WHERE c.moneda_cod <> p.moneda_cod)
+    UNION ALL
     SELECT 'CAL-01' AS regla, 'Unicidad'        AS familia,
            'Cliente unico por tipo+numero de documento' AS descripcion,
            (SELECT COUNT(*) FROM (SELECT 1 FROM cliente GROUP BY tipo_doc_cod, num_doc HAVING COUNT(*) > 1) t) AS incumple

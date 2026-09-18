@@ -6,7 +6,8 @@
 📚 Si te atascas: [glosario](../../00-fundamentos/06-glosario.md) ·
 [estándares de modelado](../../00-fundamentos/05-estandares-modelado.md) ·
 [normativa peruana](../../00-fundamentos/04-normativa-peru.md) ·
-[problemas comunes](../../00-fundamentos/07-problemas-comunes.md)
+[problemas comunes](../../00-fundamentos/07-problemas-comunes.md) ·
+[trazabilidad de reglas](../../00-fundamentos/08-trazabilidad-reglas.md)
 
 ## Herramientas
 
@@ -261,7 +262,7 @@ Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar
 | Partición `DEFAULT` | **vacía** |
 | Pares con 3+ transferencias | 14 962 |
 | Días que exceden el límite diario | 182 |
-| Reglas de calidad en `OK` | 17 |
+| Reglas de calidad en `OK` | 18 |
 | Pruebas negativas rechazadas | 6 |
 
 **Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste

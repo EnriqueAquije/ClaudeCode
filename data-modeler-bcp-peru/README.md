@@ -35,7 +35,7 @@ de esto para empezar el caso 01.
 >
 > | Casos válidos | Reglas de calidad | Pruebas negativas | Cifras verificadas | En `FALLA` |
 > |:-:|:-:|:-:|:-:|:-:|
-> | **10 / 10** | **154** `OK` | **62** rechazadas | **71** | **0** |
+> | **10 / 10** | **159** `OK` | **62** rechazadas | **71** | **0** |
 >
 > Más **12 reglas del estándar de modelado**, que comprueban que los esquemas cumplan las
 > convenciones que el propio repositorio publica.
@@ -281,7 +281,8 @@ data-modeler-bcp-peru/
 │   ├── 04-normativa-peru.md           SBS, UIF, Ley 29733 y su impacto en el modelo
 │   ├── 05-estandares-modelado.md      Nomenclatura, tipos, patrones, antipatrones
 │   ├── 06-glosario.md                 Glosario bancario y de modelado
-│   └── 07-problemas-comunes.md        Qué hacer cuando algo falla
+│   ├── 07-problemas-comunes.md        Qué hacer cuando algo falla
+│   └── 08-trazabilidad-reglas.md      Qué control hace cumplir cada regla de negocio
 ├── casos/
 │   ├── caso-01-core-cuentas-ahorro/
 │   ├── caso-02-originacion-creditos/
@@ -311,6 +312,8 @@ data-modeler-bcp-peru/
 └── validacion/
     ├── validar.sh                     Ejecuta los 10 casos contra PostgreSQL
     ├── cifras-documentadas.sql        Verifica que los READMEs digan la verdad
+    ├── estandares.sql                 Verifica que los modelos cumplan el estándar
+    ├── concurrencia.sh                Dos sesiones a la vez sobre la idempotencia
     ├── REPORTE-VALIDACION.md          Resultado de la última ejecución
     └── salida/                        Registros de cada ejecución (no versionados)
 ```
@@ -387,10 +390,11 @@ psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/04-consultas-negocio.s
 ./validacion/validar.sh                  # los 10 casos, en orden de dependencia
 ./validacion/validar.sh caso10           # un solo caso; resuelve sus prerrequisitos solo
 ./validacion/validar.sh --mi-solucion    # valida TU modelo, no el de referencia
+./validacion/concurrencia.sh             # prueba de concurrencia de la idempotencia (caso 04)
 ```
 
 El script devuelve **código de salida 0** si todos los modelos se crean, todos los datos cargan,
-todas las consultas responden, **las 154 reglas de calidad quedan en `OK`** y **las 66 cifras que
+todas las consultas responden, **las 159 reglas de calidad quedan en `OK`** y **las 66 cifras que
 los READMEs prometen coinciden con la base**. Si algo falla, imprime la regla exacta y deja el
 registro en `validacion/salida/`.
 

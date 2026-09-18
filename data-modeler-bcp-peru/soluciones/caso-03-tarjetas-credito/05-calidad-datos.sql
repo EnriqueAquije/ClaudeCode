@@ -39,6 +39,12 @@ resultados AS (
            'Hay datos cargados: transacciones de tarjeta' AS descripcion,
            (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM transaccion) AS incumple
     UNION ALL
+    -- RN-06: las columnas derivadas del estado de cuenta deben DERIVARSE, no digitarse.
+    SELECT 'CAL-14' AS regla, 'Derivacion' AS familia,
+           'linea_disponible se deriva de la linea aprobada y el saldo' AS descripcion,
+           (SELECT COUNT(*) FROM estado_cuenta
+            WHERE linea_disponible <> linea_aprobada - GREATEST(saldo_actual, 0)) AS incumple
+    UNION ALL
     SELECT 'CAL-01', 'Cuadre',
            'Estado de cuenta: saldo_actual = anterior + consumos + cargos - pagos',
            (SELECT COUNT(*) FROM estado_cuenta
