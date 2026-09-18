@@ -2,6 +2,11 @@
 
 📄 Lee primero el [enunciado](enunciado.md).
 💾 Tu trabajo va en [`soluciones/caso-06-tipo-cambio-posicion-me/mi-solucion/`](../../soluciones/caso-06-tipo-cambio-posicion-me/mi-solucion/).
+⏱️ **Tiempo estimado:** 6 a 8 horas.
+📚 Si te atascas: [glosario](../../00-fundamentos/06-glosario.md) ·
+[estándares de modelado](../../00-fundamentos/05-estandares-modelado.md) ·
+[normativa peruana](../../00-fundamentos/04-normativa-peru.md) ·
+[problemas comunes](../../00-fundamentos/07-problemas-comunes.md)
 
 ## Herramientas
 

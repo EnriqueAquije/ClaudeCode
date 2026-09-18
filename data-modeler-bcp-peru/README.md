@@ -7,17 +7,42 @@ Contiene **10 casos reales desarrollables de principio a fin**, cada uno con su 
 paso a paso, sus datos y su solución de referencia (modelo conceptual → lógico → entidad-relación →
 físico → consultas → validación de calidad).
 
+---
+
+## Antes de nada: ¿es esto para ti?
+
+| | |
+|---|---|
+| **Para quién** | Analista SQL que quiere subir a modelador · recién egresado · quien se prepara para una entrevista en banca |
+| **Qué necesitas saber ya** | `SELECT`, `JOIN`, `GROUP BY`. **No** hace falta saber modelar: eso es lo que se aprende aquí |
+| **Cuánto dura** | **86 a 108 horas** en total. A 8 h/semana son ~3 meses; a 4 h/semana, ~6 |
+| **Qué sabrás hacer al terminar** | Levantar reglas de negocio, decidir el grano, normalizar y desnormalizar con criterio, escribir un DDL que impida los datos imposibles, documentar decisiones en un ADR y defender tu modelo en una revisión |
+| **Qué necesitas instalar** | PostgreSQL y un cliente SQL. Ambos gratuitos. Hay una [ruta 100 % en el navegador](00-fundamentos/02-herramientas.md) si no puedes instalar nada |
+
+**Tu primer clic:** [caso 01 — Core de cuentas de ahorro](casos/caso-01-core-cuentas-ahorro/) *(4 a 6 horas)*.
+
+> **Si tienes prisa porque tienes una entrevista esta semana**, haz los casos **01, 02 y 05** en ese
+> orden: cubren modelado transaccional, dominios regulatorios de la SBS y modelo dimensional, que es
+> lo que más se pregunta. Son unas 20 horas.
+
+Lo que sigue explica el rol y el contexto. **Puedes saltártelo y volver después**: no necesitas nada
+de esto para empezar el caso 01.
+
 > ### ✅ Validado de punta a punta
 >
 > Los 10 casos se ejecutaron completos contra **PostgreSQL 16**: modelo físico → carga de datos →
 > consultas de negocio → reglas de calidad.
 >
-> | Casos válidos | Reglas de calidad en `OK` | Reglas en `FALLA` | Cifras verificadas | Filas cargadas |
+> | Casos válidos | Reglas de calidad | Pruebas negativas | Cifras verificadas | En `FALLA` |
 > |:-:|:-:|:-:|:-:|:-:|
-> | **10 / 10** | **151** | **0** | **71** | **848 188** |
+> | **10 / 10** | **151** `OK` | **62** rechazadas | **71** | **0** |
 >
-> Las *cifras verificadas* son las que los READMEs prometen ("900 deudores, 195 duplicados
-> resueltos…"): el validador comprueba que la base las cumpla, no solo que los scripts corran.
+> Tres cosas distintas, y las tres importan:
+> **las reglas** comprueban que los datos cumplan lo que el negocio exige;
+> **las pruebas negativas** intentan la operación prohibida y exigen que la base la rechace —
+> son las que detectan que a un modelo le falta una restricción, cosa que una regla sobre datos
+> limpios nunca ve;
+> **las cifras** son las que los READMEs prometen ("900 deudores, 953 duplicados resueltos…").
 >
 > Reprodúcelo con `./validacion/validar.sh`. Detalle en
 > [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md).
@@ -252,7 +277,8 @@ data-modeler-bcp-peru/
 │   ├── 03-fuentes-datos-peru.md       Fuentes legales, verificadas y gratuitas
 │   ├── 04-normativa-peru.md           SBS, UIF, Ley 29733 y su impacto en el modelo
 │   ├── 05-estandares-modelado.md      Nomenclatura, tipos, patrones, antipatrones
-│   └── 06-glosario.md                 Glosario bancario y de modelado
+│   ├── 06-glosario.md                 Glosario bancario y de modelado
+│   └── 07-problemas-comunes.md        Qué hacer cuando algo falla
 ├── casos/
 │   ├── caso-01-core-cuentas-ahorro/
 │   ├── caso-02-originacion-creditos/
@@ -276,7 +302,8 @@ data-modeler-bcp-peru/
 │       ├── 02-modelo-logico.md        Diagrama E-R lógico + diccionario
 │       ├── 03-modelo-fisico.sql       DDL ejecutable
 │       ├── 04-consultas-negocio.sql   Preguntas de negocio resueltas
-│       ├── 05-calidad-datos.sql       Reglas de calidad ejecutables
+│       │       ├── 05-calidad-datos.sql       Reglas de calidad ejecutables
+│       ├── 06-pruebas-negativas.sql   Intenta lo prohibido y exige el rechazo
 │       └── mi-solucion/               Espacio para TU propia resolución
 └── validacion/
     ├── validar.sh                     Ejecuta los 10 casos contra PostgreSQL
@@ -291,18 +318,20 @@ data-modeler-bcp-peru/
 
 Van de menor a mayor dificultad y cubren todo el ciclo: OLTP → analítico → gobierno y regulación.
 
-| # | Caso | Tipo de modelo | Técnica principal | Dificultad |
-|---|---|---|---|---|
-| 01 | [Core de cuentas de ahorro](casos/caso-01-core-cuentas-ahorro/) | OLTP | Normalización 3FN, integridad transaccional | ★☆☆☆☆ |
-| 02 | [Originación de créditos de consumo](casos/caso-02-originacion-creditos/) | OLTP | Dominios regulatorios SBS, máquina de estados | ★★☆☆☆ |
-| 03 | [Tarjetas de crédito: facturación y mora](casos/caso-03-tarjetas-credito/) | OLTP | Ciclos de facturación, historia de saldos | ★★☆☆☆ |
-| 04 | [Billetera digital P2P (tipo Yape)](casos/caso-04-billetera-digital-p2p/) | OLTP alto volumen | Particionamiento, idempotencia, eventos | ★★★☆☆ |
-| 05 | [DWH de colocaciones y captaciones](casos/caso-05-dwh-colocaciones/) | Analítico | Modelo estrella (Kimball), SCD2 | ★★★☆☆ |
-| 06 | [Tipo de cambio y posición en ME](casos/caso-06-tipo-cambio-posicion-me/) | Analítico | Series temporales, conversión multimoneda | ★★★☆☆ |
-| 07 | [PLAFT: monitoreo de operaciones](casos/caso-07-plaft-monitoreo/) | Híbrido | Motor de reglas, alertas, agregados móviles | ★★★★☆ |
-| 08 | [Cliente 360 / MDM](casos/caso-08-cliente-360-mdm/) | MDM | Golden record, *matching*, supervivencia | ★★★★☆ |
-| 09 | [Data Vault de inclusión financiera](casos/caso-09-data-vault-inclusion/) | Analítico | Data Vault 2.0 (Hub/Link/Satélite) | ★★★★★ |
-| 10 | [Reporte regulatorio SBS (RCD)](casos/caso-10-reporte-regulatorio-sbs/) | Regulatorio | Linaje, trazabilidad, cuadres | ★★★★★ |
+**Marca la casilla al terminar cada uno.** Son 86-108 horas; ver el avance ayuda.
+
+| ✓ | # | Caso | Tipo de modelo | Técnica principal | Dificultad | Horas |
+|:-:|---|---|---|---|---|:-:|
+| ☐ | 01 | [Core de cuentas de ahorro](casos/caso-01-core-cuentas-ahorro/) | OLTP | Normalización 3FN, integridad transaccional | ★☆☆☆☆ | 4-6 |
+| ☐ | 02 | [Originación de créditos de consumo](casos/caso-02-originacion-creditos/) | OLTP | Dominios regulatorios SBS, máquina de estados | ★★☆☆☆ | 6-8 |
+| ☐ | 03 | [Tarjetas de crédito: facturación y mora](casos/caso-03-tarjetas-credito/) | OLTP | Ciclos de facturación, historia de saldos | ★★☆☆☆ | 6-8 |
+| ☐ | 04 | [Billetera digital P2P (tipo Yape)](casos/caso-04-billetera-digital-p2p/) | OLTP alto volumen | Particionamiento, idempotencia, eventos | ★★★☆☆ | 8-10 |
+| ☐ | 05 | [DWH de colocaciones y captaciones](casos/caso-05-dwh-colocaciones/) | Analítico | Modelo estrella (Kimball), SCD2 | ★★★☆☆ | 10-12 |
+| ☐ | 06 | [Tipo de cambio y posición en ME](casos/caso-06-tipo-cambio-posicion-me/) | Analítico | Series temporales, conversión multimoneda | ★★★☆☆ | 6-8 |
+| ☐ | 07 | [PLAFT: monitoreo de operaciones](casos/caso-07-plaft-monitoreo/) | Híbrido | Motor de reglas, alertas, agregados móviles | ★★★★☆ | 10-12 |
+| ☐ | 08 | [Cliente 360 / MDM](casos/caso-08-cliente-360-mdm/) | MDM | Golden record, *matching*, supervivencia | ★★★★☆ | 12-14 |
+| ☐ | 09 | [Data Vault de inclusión financiera](casos/caso-09-data-vault-inclusion/) | Analítico | Data Vault 2.0 (Hub/Link/Satélite) | ★★★★★ | 12-16 |
+| ☐ | 10 | [Reporte regulatorio SBS (RCD)](casos/caso-10-reporte-regulatorio-sbs/) | Regulatorio | Linaje, trazabilidad, cuadres | ★★★★★ | 12-14 |
 
 ---
 
@@ -347,13 +376,14 @@ psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/04-consultas-negocio.s
 >    scripts SQL corren igual desde `psql` en cualquier sistema.
 >
 > Todo esto, con lo que se probó y lo que no, está en
-> [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md#7-funcionará-igual-en-tu-máquina).
+> [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md#8-funcionará-igual-en-tu-máquina).
 
 ### Validar los 10 casos de una sola vez
 
 ```bash
-./validacion/validar.sh            # los 10 casos, en orden de dependencia
-./validacion/validar.sh caso10     # un solo caso; resuelve sus prerrequisitos solo
+./validacion/validar.sh                  # los 10 casos, en orden de dependencia
+./validacion/validar.sh caso10           # un solo caso; resuelve sus prerrequisitos solo
+./validacion/validar.sh --mi-solucion    # valida TU modelo, no el de referencia
 ```
 
 El script devuelve **código de salida 0** si todos los modelos se crean, todos los datos cargan,

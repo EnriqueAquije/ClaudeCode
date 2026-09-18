@@ -107,6 +107,30 @@ ejecutar_sql() {
 # =====================================================================================
 
 A_EJECUTAR=()
+
+# --mi-solucion: valida lo que TU escribiste, no la solucion de referencia.
+# Por defecto el script valida la referencia, que sirve para comprobar el entorno y para
+# comparar. Pero lo que el estudiante necesita saber es si SU modelo aguanta, y eso solo
+# lo responde ejecutar SUS ficheros.
+MODO_MI_SOLUCION=0
+ARGS=()
+for a in "$@"; do
+    case "${a}" in
+        --mi-solucion|--mi-solucion=*|-m) MODO_MI_SOLUCION=1 ;;
+        -h|--help)
+            echo "Uso: validar.sh [--mi-solucion] [casoNN]"
+            echo ""
+            echo "  sin argumentos     valida la solucion de referencia de los 10 casos"
+            echo "  casoNN             valida solo ese caso, resolviendo sus prerrequisitos"
+            echo "  --mi-solucion      valida TU desarrollo (soluciones/caso-NN/mi-solucion/)"
+            echo "                     en lugar del de referencia, cuando exista"
+            exit 0 ;;
+        -*) echo "${ROJO}Opción desconocida: ${a}${FIN}"; echo "Prueba: validar.sh --help"; exit 2 ;;
+        *)  ARGS+=("${a}") ;;
+    esac
+done
+set -- ${ARGS[@]+"${ARGS[@]}"}
+
 if [ $# -gt 1 ]; then
     # Un argumento de mas suele ser "validar.sh caso01 caso02": quien lo teclea espera dos
     # casos y obtendria uno en silencio. Mejor fallar y decirlo.
@@ -162,9 +186,15 @@ fi
 # =====================================================================================
 
 titulo "VALIDACIÓN DEL LABORATORIO — data-modeler-bcp-peru"
-echo "${AMAR}Qué valida  : la SOLUCIÓN DE REFERENCIA de cada caso (soluciones/caso-NN/).${FIN}"
-echo "${AMAR}              NO valida lo que hayas escrito en mi-solucion/. Sirve para comprobar${FIN}"
-echo "${AMAR}              que tu entorno funciona y para comparar contra el resultado esperado.${FIN}"
+if [ "${MODO_MI_SOLUCION}" -eq 1 ]; then
+    echo "${AMAR}Qué valida  : TU DESARROLLO (soluciones/caso-NN/mi-solucion/).${FIN}"
+    echo "${AMAR}              De cada caso usa tus ficheros si existen; si falta alguno, avisa${FIN}"
+    echo "${AMAR}              y cae al de referencia, diciendolo en pantalla.${FIN}"
+else
+    echo "${AMAR}Qué valida  : la SOLUCIÓN DE REFERENCIA de cada caso (soluciones/caso-NN/).${FIN}"
+    echo "${AMAR}              NO valida lo que hayas escrito en mi-solucion/. Para eso:${FIN}"
+    echo "${AMAR}              ./validacion/validar.sh --mi-solucion${FIN}"
+fi
 echo ""
 echo "Base de datos : ${BD}"
 echo "Fecha         : $(date '+%Y-%m-%d %H:%M:%S')"
@@ -194,8 +224,12 @@ echo "${VERDE}✓${FIN} Conexión a PostgreSQL: $(psql -d "${BD}" -At -c 'SHOW s
 # a la corrida exitosa, que es justo cuando FALLIDOS esta vacio.
 FALLIDOS=()
 N_FALLIDOS=0
+N_TUYOS=0
+N_MEZCLA=0
 TOTAL_OK=0
 TOTAL_FALLA=0
+TOTAL_NEG=0
+TOTAL_NEG_FALLA=0
 INICIO_GLOBAL=$SECONDS
 
 for ID in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
@@ -211,12 +245,42 @@ for ID in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
 
     DIR_SOL="${RAIZ}/soluciones/${cdir}"
     DIR_CASO="${RAIZ}/casos/${cdir}"
+    DIR_MIO="${DIR_SOL}/mi-solucion"
     INICIO=$SECONDS
     ERROR_CASO=0
 
+    # Elige, fichero a fichero, el tuyo o el de referencia.
+    F_DDL="${DIR_SOL}/03-modelo-fisico.sql"
+    F_QRY="${DIR_SOL}/04-consultas-negocio.sql"
+    F_CAL="${DIR_SOL}/05-calidad-datos.sql"
+    F_NEG="${DIR_SOL}/06-pruebas-negativas.sql"
+    ORIGEN="referencia"
+    if [ "${MODO_MI_SOLUCION}" -eq 1 ]; then
+        FALTAN=""
+        if [ -f "${DIR_MIO}/03-modelo-fisico.sql" ]; then F_DDL="${DIR_MIO}/03-modelo-fisico.sql"
+                                                     else FALTAN="${FALTAN} 03-modelo-fisico.sql"; fi
+        if [ -f "${DIR_MIO}/04-consultas-negocio.sql" ]; then F_QRY="${DIR_MIO}/04-consultas-negocio.sql"
+                                                        else FALTAN="${FALTAN} 04-consultas-negocio.sql"; fi
+        if [ -f "${DIR_MIO}/05-calidad-datos.sql" ]; then F_CAL="${DIR_MIO}/05-calidad-datos.sql"
+                                                    else FALTAN="${FALTAN} 05-calidad-datos.sql"; fi
+        # Las pruebas negativas NO se sustituyen: son el examen del modelo, y el examen
+        # no lo escribe quien se examina. Se ejecutan siempre las de referencia contra
+        # el esquema que este cargado, que es justo lo que las hace utiles con tu modelo.
+        if [ -n "${FALTAN}" ]; then
+            echo "  ${AMAR}Te faltan en mi-solucion/:${FIN}${FALTAN}"
+            echo "  ${AMAR}Para esos se usa el de referencia, asi que ese OK no es tuyo.${FIN}"
+            ORIGEN="mezcla"
+            N_MEZCLA=$((N_MEZCLA + 1))
+        else
+            ORIGEN="tu desarrollo"
+            N_TUYOS=$((N_TUYOS + 1))
+        fi
+        echo "  ${AMAR}Validando:${FIN} ${ORIGEN}"
+    fi
+
     # --- 1. Modelo físico ------------------------------------------------------------
     printf '  %-28s' "1. modelo físico"
-    if ejecutar_sql "${DIR_SOL}/03-modelo-fisico.sql" "${SALIDA}/${ID}-01-ddl.log"; then
+    if ejecutar_sql "${F_DDL}" "${SALIDA}/${ID}-01-ddl.log"; then
         echo "${VERDE}OK${FIN}"
     else
         echo "${ROJO}ERROR${FIN}"; ERROR_CASO=1
@@ -237,7 +301,7 @@ for ID in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
     # --- 3. Consultas de negocio -----------------------------------------------------
     if [ ${ERROR_CASO} -eq 0 ]; then
         printf '  %-28s' "3. consultas de negocio"
-        if ejecutar_sql "${DIR_SOL}/04-consultas-negocio.sql" "${SALIDA}/${ID}-03-consultas.log"; then
+        if ejecutar_sql "${F_QRY}" "${SALIDA}/${ID}-03-consultas.log"; then
             echo "${VERDE}OK${FIN}"
         else
             echo "${ROJO}ERROR${FIN}"; ERROR_CASO=1
@@ -249,7 +313,7 @@ for ID in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
     if [ ${ERROR_CASO} -eq 0 ]; then
         printf '  %-28s' "4. reglas de calidad"
         LOG_CAL="${SALIDA}/${ID}-04-calidad.log"
-        if ejecutar_sql "${DIR_SOL}/05-calidad-datos.sql" "${LOG_CAL}"; then
+        if ejecutar_sql "${F_CAL}" "${LOG_CAL}"; then
             # La ultima consulta de cada 05-calidad-datos.sql imprime una fila por regla,
             # terminada en OK o en FALLA. Eso es lo que se cuenta aqui.
             N_OK=$(grep -cE '\| OK *$'    "${LOG_CAL}" || true)
@@ -261,7 +325,14 @@ for ID in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
                 ERROR_CASO=1
                 TOTAL_FALLA=$((TOTAL_FALLA + N_FALLA))
                 TOTAL_OK=$((TOTAL_OK + N_OK))
-            elif [ "${N_TOTAL}" -lt "${cmin}" ]; then
+            elif [ "${MODO_MI_SOLUCION}" -eq 1 ] && [ "${N_TOTAL}" -eq 0 ]; then
+                # Con tu propio fichero de calidad no se exige el numero de la referencia:
+                # puedes escribir mas reglas o menos. Lo que NO vale es cero.
+                echo "${ROJO}NINGUNA REGLA EVALUADA${FIN}"
+                echo "      Tu 05-calidad-datos.sql no produjo el resumen OK/FALLA."
+                echo "      Revisa ${LOG_CAL#${RAIZ}/}"
+                ERROR_CASO=1
+            elif [ "${MODO_MI_SOLUCION}" -eq 0 ] && [ "${N_TOTAL}" -lt "${cmin}" ]; then
                 # "0 reglas OK" NO es un exito: significa que no se evaluo nada. Un fichero
                 # de calidad vacio, truncado o que fallo a medias daria verde sin este control.
                 echo "${ROJO}SOLO ${N_TOTAL} REGLAS EVALUADAS (se esperaban ${cmin})${FIN}"
@@ -275,6 +346,31 @@ for ID in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
         else
             echo "${ROJO}ERROR${FIN}"; ERROR_CASO=1
             tail -n 12 "${LOG_CAL}" | sed 's/^/      /'
+        fi
+    fi
+
+    # --- 5. Pruebas negativas -------------------------------------------------------
+    if [ ${ERROR_CASO} -eq 0 ] && [ -f "${F_NEG}" ]; then
+        printf '  %-28s' "5. pruebas negativas"
+        LOG_NEG="${SALIDA}/${ID}-05-negativas.log"
+        if ejecutar_sql "${F_NEG}" "${LOG_NEG}"; then
+            N_NOK=$(grep -cE '\| OK *$'    "${LOG_NEG}" || true)
+            N_NFA=$(grep -cE '\| FALLA *$' "${LOG_NEG}" || true)
+            if [ "${N_NFA}" -gt 0 ]; then
+                echo "${ROJO}${N_NFA} OPERACIÓN(ES) PROHIBIDA(S) ACEPTADA(S)${FIN}"
+                grep -E '\| FALLA *$' "${LOG_NEG}" | sed 's/^/      /'
+                ERROR_CASO=1
+                TOTAL_NEG_FALLA=$((TOTAL_NEG_FALLA + N_NFA))
+            elif [ "${N_NOK}" -eq 0 ]; then
+                echo "${ROJO}NINGUNA PRUEBA EJECUTADA${FIN}"
+                ERROR_CASO=1
+            else
+                echo "${VERDE}${N_NOK} rechazadas correctamente${FIN}"
+                TOTAL_NEG=$((TOTAL_NEG + N_NOK))
+            fi
+        else
+            echo "${ROJO}ERROR${FIN}"; ERROR_CASO=1
+            tail -n 12 "${LOG_NEG}" | sed 's/^/      /'
         fi
     fi
 
@@ -296,7 +392,9 @@ done
 TOTAL_CIFRAS=0
 CIFRAS_FALLA=0
 
-if [ $# -eq 0 ] && [ "${N_FALLIDOS}" -eq 0 ]; then
+# Las cifras documentadas describen la solucion de referencia, asi que no se comprueban
+# cuando se esta validando un modelo propio: sus tablas pueden llamarse de otro modo.
+if [ $# -eq 0 ] && [ "${N_FALLIDOS}" -eq 0 ] && [ "${MODO_MI_SOLUCION}" -eq 0 ]; then
     titulo "CIFRAS DOCUMENTADAS vs. BASE DE DATOS"
     echo "  Los datos son deterministas, asi que cada cifra citada en un README"
     echo "  debe cumplirse siempre. Si un generador cambia y el README no, esto falla."
@@ -332,6 +430,7 @@ echo "  Casos ejecutados     : ${N_CASOS}"
 echo "  Casos válidos        : $(( N_CASOS - N_FALLIDOS ))"
 echo "  Reglas de calidad OK : ${TOTAL_OK}"
 echo "  Reglas en FALLA      : ${TOTAL_FALLA}"
+echo "  Pruebas negativas    : ${TOTAL_NEG} rechazadas, ${TOTAL_NEG_FALLA} aceptadas indebidamente"
 if [ "${TOTAL_CIFRAS}" -gt 0 ] || [ "${CIFRAS_FALLA}" -gt 0 ]; then
     echo "  Cifras documentadas  : ${TOTAL_CIFRAS} verificadas, ${CIFRAS_FALLA} en FALLA"
 fi
@@ -345,5 +444,18 @@ if [ "${N_FALLIDOS}" -gt 0 ]; then
 fi
 
 echo ""
+if [ "${MODO_MI_SOLUCION}" -eq 1 ]; then
+    if [ "${N_TUYOS}" -eq 0 ]; then
+        echo "${AMAR}${NEGRITA}  Nada tuyo se validó.${FIN}"
+        echo "  Los ${N_MEZCLA} casos corrieron con la solución de referencia porque tu carpeta"
+        echo "  mi-solucion/ está vacía. Ese OK no dice nada sobre tu modelo."
+        echo "  Escribe tu 03-modelo-fisico.sql en soluciones/caso-NN/mi-solucion/ y vuelve."
+        exit 0
+    fi
+    echo "${VERDE}${NEGRITA}  ✓ TU modelo pasó en ${N_TUYOS} caso(s).${FIN}"
+    [ "${N_MEZCLA}" -gt 0 ] && \
+        echo "${AMAR}  Otros ${N_MEZCLA} corrieron total o parcialmente con la referencia: ese OK no es tuyo.${FIN}"
+    exit 0
+fi
 echo "${VERDE}${NEGRITA}  ✓ VALIDACIÓN COMPLETA: todos los escenarios son 100 % desarrollables.${FIN}"
 exit 0

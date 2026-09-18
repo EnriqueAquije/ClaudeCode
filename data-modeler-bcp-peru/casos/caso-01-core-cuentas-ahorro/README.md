@@ -6,6 +6,11 @@
 > La solución de referencia está en la carpeta padre de esa ruta.
 
 📄 Lee primero el [enunciado](enunciado.md).
+⏱️ **Tiempo estimado:** 4 a 6 horas.
+📚 Si te atascas: [glosario](../../00-fundamentos/06-glosario.md) ·
+[estándares de modelado](../../00-fundamentos/05-estandares-modelado.md) ·
+[normativa peruana](../../00-fundamentos/04-normativa-peru.md) ·
+[problemas comunes](../../00-fundamentos/07-problemas-comunes.md)
 
 ---
 

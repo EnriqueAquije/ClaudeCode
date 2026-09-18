@@ -2,6 +2,11 @@
 
 📄 Lee primero el [enunciado](enunciado.md).
 💾 Tu trabajo va en [`soluciones/caso-04-billetera-digital-p2p/mi-solucion/`](../../soluciones/caso-04-billetera-digital-p2p/mi-solucion/).
+⏱️ **Tiempo estimado:** 8 a 10 horas.
+📚 Si te atascas: [glosario](../../00-fundamentos/06-glosario.md) ·
+[estándares de modelado](../../00-fundamentos/05-estandares-modelado.md) ·
+[normativa peruana](../../00-fundamentos/04-normativa-peru.md) ·
+[problemas comunes](../../00-fundamentos/07-problemas-comunes.md)
 
 ## Herramientas
 

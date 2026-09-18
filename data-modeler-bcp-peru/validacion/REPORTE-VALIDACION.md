@@ -20,6 +20,8 @@
 | **Casos válidos** | **10 de 10** |
 | **Reglas de calidad en `OK`** | **151** |
 | **Reglas en `FALLA`** | **0** |
+| **Pruebas negativas rechazadas** | **62** |
+| **Operaciones prohibidas aceptadas** | **0** |
 | **Cifras documentadas verificadas** | **71** |
 | **Cifras que no coinciden** | **0** |
 | **Errores de PostgreSQL** | **0** |
@@ -130,7 +132,47 @@ Si alguien lo hace "por comodidad", la validación falla en la siguiente corrida
 
 ---
 
-## 5. Las cifras de los READMEs se verifican solas
+## 5. Las pruebas negativas: lo que una regla sobre datos no puede ver
+
+Las 151 reglas comprueban los **datos**. Hay una clase entera de defectos que no pueden detectar, y
+es la que más importa cuando alguien construye su propio modelo.
+
+**El experimento.** Quita `uq_cliente_doc` del DDL del caso 01 y vuelve a correr las reglas:
+
+```
+caso01 -> 10 reglas OK, 0 FALLA
+```
+
+Todo verde. La regla CAL-01 cuenta clientes duplicados por documento, y no hay ninguno en la carga,
+así que no hay nada que contar. **El hueco solo se manifiesta el día que alguien inserta el
+duplicado**, que en producción es el día que se integra una fuente nueva.
+
+Las pruebas negativas atacan por el otro lado: **intentan la operación prohibida y exigen que la
+base la rechace**.
+
+```
+ prueba |             descripcion             |        deberia_impedirlo        | estado
+--------+-------------------------------------+---------------------------------+--------
+ PN-01  | Dos clientes con el mismo documento | unicidad de (tipo_doc, num_doc) | FALLA
+```
+
+Con la restricción quitada, PN-01 pasa a `FALLA` de inmediato.
+
+**Tres propiedades de diseño que las hacen utilizables:**
+
+| Propiedad | Por qué |
+|---|---|
+| Se comprueban por **comportamiento**, no por nombre de restricción | Sirven con el modelo del estudiante aunque haya llamado a sus constraints de otro modo |
+| Una prueba que **falla no deja rastro** | Si la base acepta lo prohibido, el cambio se revierte con un `RAISE` propio (`ERRCODE ZZ001`). Verificado: 500 clientes antes, 500 después |
+| **No se sustituyen** en modo `--mi-solucion` | El examen no lo escribe quien se examina |
+
+> **La segunda propiedad costó un error.** La primera versión del arnés dejaba el dato imposible
+> dentro del laboratorio cuando una prueba fallaba, y eso hacía que la siguiente corrida diera un
+> resultado distinto. Un arnés de pruebas que ensucia lo que prueba es peor que no tenerlo.
+
+---
+
+## 6. Las cifras de los READMEs se verifican solas
 
 Cada `README.md` de solución dice qué debe producir el caso: *"900 deudores, 1 400 solicitudes,
 700 créditos…"*. Esas cifras son **promesas al lector**, y una promesa que nadie comprueba se rompe
@@ -160,7 +202,7 @@ filas de un satélite, la verificación las detecta y las nombra.
 
 ---
 
-## 6. Cómo reproducir esta validación
+## 7. Cómo reproducir esta validación
 
 ### Requisitos
 
@@ -213,7 +255,7 @@ caso10-02-datos.log      caso10-04-calidad.log
 
 ---
 
-## 7. ¿Funcionará igual en tu máquina?
+## 8. ¿Funcionará igual en tu máquina?
 
 Esta es la pregunta que importa, y la respuesta honesta tiene dos partes.
 
@@ -256,7 +298,7 @@ diagnóstico.
 
 ---
 
-## 8. Qué significa y qué no significa esta validación
+## 9. Qué significa y qué no significa esta validación
 
 **Lo que certifica:**
 
@@ -265,6 +307,7 @@ diagnóstico.
 - Las **98 preguntas de negocio** devuelven resultados (PN-01 a PN-10 en cada caso; PN-01 a PN-08
   en el `caso01`).
 - Las 151 reglas de calidad pasan.
+- Las **62 pruebas negativas** son rechazadas por el modelo, como deben.
 - Las **66 cifras citadas en los READMEs** coinciden exactamente con lo que la base produce.
 - Los escenarios narrados en los enunciados **ocurren realmente en los datos**: hay deudores que se
   deterioran, hay alertas de PLAFT que se disparan, hay un envío regulatorio que se observa y se
@@ -281,7 +324,7 @@ diagnóstico.
 
 ---
 
-## 9. Determinismo
+## 10. Determinismo
 
 Ningún script usa `random()`. Todos los datos se generan con expresiones deterministas sobre
 `generate_series` (módulos, restos y aritmética de fechas). **Consecuencia práctica:** dos personas
