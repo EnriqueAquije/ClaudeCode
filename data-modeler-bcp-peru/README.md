@@ -311,8 +311,8 @@ Van de menor a mayor dificultad y cubren todo el ciclo: OLTP → analítico → 
 ### Requisitos (todos gratuitos)
 
 ```bash
-# 1. PostgreSQL 14 o superior
-#    Linux:   sudo apt install postgresql
+# 1. PostgreSQL 14 o superior  (probado en 16.13; ver nota abajo)
+#    Linux:   sudo apt install postgresql postgresql-contrib
 #    macOS:   brew install postgresql@16
 #    Windows: https://www.postgresql.org/download/windows/
 
@@ -334,6 +334,20 @@ psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/03-modelo-fisico.sql
 psql -d bcp_lab -f casos/caso-01-core-cuentas-ahorro/datos/carga_datos.sql
 psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/04-consultas-negocio.sql
 ```
+
+> **Antes de empezar, dos cosas que evitan el 90 % de los tropiezos:**
+>
+> 1. **`postgresql-contrib` no siempre viene incluido.** El caso 08 necesita `fuzzystrmatch`,
+>    `pg_trgm` y `unaccent`. Compruébalo con:
+>    ```bash
+>    psql -d bcp_lab -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+>    ```
+>    Si eso falla, instala el paquete `contrib` de tu distribución.
+> 2. **En Windows el validador necesita WSL o Git Bash**, porque es un script de `bash`. Los
+>    scripts SQL corren igual desde `psql` en cualquier sistema.
+>
+> Todo esto, con lo que se probó y lo que no, está en
+> [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md#7-funcionará-igual-en-tu-máquina).
 
 ### Validar los 10 casos de una sola vez
 

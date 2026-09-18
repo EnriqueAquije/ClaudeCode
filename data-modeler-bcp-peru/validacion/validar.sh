@@ -89,7 +89,7 @@ expandir_dependencias() {
             break
         fi
     done
-    printf '%s\n' "${resultado[@]}"
+    printf '%s\n' ${resultado[@]+"${resultado[@]}"}
 }
 
 ejecutar_sql() {
@@ -135,7 +135,9 @@ if [ $# -eq 1 ]; then
     while IFS= read -r c; do
         # sin duplicados, conservando el orden
         YA=0
-        for v in "${A_EJECUTAR[@]:-}"; do [ "${v}" = "${c}" ] && { YA=1; break; }; done
+        for v in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
+            [ "${v}" = "${c}" ] && { YA=1; break; }
+        done
         [ "${YA}" -eq 0 ] && A_EJECUTAR+=("${c}")
     done < <(expandir_dependencias "${SOLICITADO}")
 
@@ -148,7 +150,9 @@ else
 fi
 
 # Red de seguridad: si por lo que sea la lista quedó vacía, esto NO es un éxito.
-if [ "${#A_EJECUTAR[@]}" -eq 0 ]; then
+N_CASOS=0
+for _c in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do N_CASOS=$((N_CASOS + 1)); done
+if [ "${N_CASOS}" -eq 0 ]; then
     echo "${ROJO}No hay ningún caso que ejecutar. Abortando sin validar nada.${FIN}"
     exit 2
 fi
@@ -164,7 +168,7 @@ echo "${AMAR}              que tu entorno funciona y para comparar contra el res
 echo ""
 echo "Base de datos : ${BD}"
 echo "Fecha         : $(date '+%Y-%m-%d %H:%M:%S')"
-echo "Casos         : ${#A_EJECUTAR[@]}"
+echo "Casos         : ${N_CASOS}"
 
 if ! command -v psql > /dev/null 2>&1; then
     echo "${ROJO}✗ No se encontró psql en el PATH.${FIN}"
@@ -184,12 +188,17 @@ echo "${VERDE}✓${FIN} Conexión a PostgreSQL: $(psql -d "${BD}" -At -c 'SHOW s
 #  Ejecución
 # =====================================================================================
 
+# PORTABILIDAD: en bash 4.3 y anteriores -- y el bash del sistema en macOS es 3.2 --
+# expandir un array VACIO bajo `set -u` aborta con "unbound variable". Por eso el conteo
+# se lleva en variables escalares y no con ${#array[@]}: el script tiene que sobrevivir
+# a la corrida exitosa, que es justo cuando FALLIDOS esta vacio.
 FALLIDOS=()
+N_FALLIDOS=0
 TOTAL_OK=0
 TOTAL_FALLA=0
 INICIO_GLOBAL=$SECONDS
 
-for ID in "${A_EJECUTAR[@]}"; do
+for ID in ${A_EJECUTAR[@]+"${A_EJECUTAR[@]}"}; do
 
     # datos del caso
     for fila in "${CASOS[@]}"; do
@@ -275,6 +284,7 @@ for ID in "${A_EJECUTAR[@]}"; do
     else
         echo "  ${ROJO}${NEGRITA}✗ ${ID} FALLÓ${FIN} (${DURACION}s) — revisa ${SALIDA}/${ID}-*.log"
         FALLIDOS+=("${ID}")
+        N_FALLIDOS=$((N_FALLIDOS + 1))
     fi
 done
 
@@ -286,7 +296,7 @@ done
 TOTAL_CIFRAS=0
 CIFRAS_FALLA=0
 
-if [ $# -eq 0 ] && [ ${#FALLIDOS[@]} -eq 0 ]; then
+if [ $# -eq 0 ] && [ "${N_FALLIDOS}" -eq 0 ]; then
     titulo "CIFRAS DOCUMENTADAS vs. BASE DE DATOS"
     echo "  Los datos son deterministas, asi que cada cifra citada en un README"
     echo "  debe cumplirse siempre. Si un generador cambia y el README no, esto falla."
@@ -300,6 +310,7 @@ if [ $# -eq 0 ] && [ ${#FALLIDOS[@]} -eq 0 ]; then
             echo "${ROJO}${CIFRAS_FALLA} CIFRA(S) NO COINCIDEN CON LA DOCUMENTACION${FIN}"
             grep -E '\| FALLA *$' "${LOG_CIF}" | sed 's/^/      /'
             FALLIDOS+=("cifras-documentadas")
+            N_FALLIDOS=$((N_FALLIDOS + 1))
         else
             echo "${VERDE}${TOTAL_CIFRAS} cifras coinciden${FIN}"
         fi
@@ -307,6 +318,7 @@ if [ $# -eq 0 ] && [ ${#FALLIDOS[@]} -eq 0 ]; then
         echo "${ROJO}ERROR${FIN}"
         tail -n 12 "${LOG_CIF}" | sed 's/^/      /'
         FALLIDOS+=("cifras-documentadas")
+        N_FALLIDOS=$((N_FALLIDOS + 1))
     fi
 fi
 
@@ -316,8 +328,8 @@ fi
 
 DURACION_GLOBAL=$((SECONDS - INICIO_GLOBAL))
 titulo "RESUMEN"
-echo "  Casos ejecutados     : ${#A_EJECUTAR[@]}"
-echo "  Casos válidos        : $(( ${#A_EJECUTAR[@]} - ${#FALLIDOS[@]} ))"
+echo "  Casos ejecutados     : ${N_CASOS}"
+echo "  Casos válidos        : $(( N_CASOS - N_FALLIDOS ))"
 echo "  Reglas de calidad OK : ${TOTAL_OK}"
 echo "  Reglas en FALLA      : ${TOTAL_FALLA}"
 if [ "${TOTAL_CIFRAS}" -gt 0 ] || [ "${CIFRAS_FALLA}" -gt 0 ]; then
@@ -326,7 +338,7 @@ fi
 echo "  Tiempo total         : ${DURACION_GLOBAL}s"
 echo "  Logs                 : ${SALIDA#${RAIZ}/}/"
 
-if [ ${#FALLIDOS[@]} -gt 0 ]; then
+if [ "${N_FALLIDOS}" -gt 0 ]; then
     echo ""
     echo "${ROJO}${NEGRITA}  VALIDACIÓN FALLIDA — casos con problemas: ${FALLIDOS[*]}${FIN}"
     exit 1

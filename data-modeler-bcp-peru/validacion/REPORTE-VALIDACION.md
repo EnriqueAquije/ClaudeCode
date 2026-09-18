@@ -213,7 +213,50 @@ caso10-02-datos.log      caso10-04-calidad.log
 
 ---
 
-## 7. Qué significa y qué no significa esta validación
+## 7. ¿Funcionará igual en tu máquina?
+
+Esta es la pregunta que importa, y la respuesta honesta tiene dos partes.
+
+### Lo que sí se probó, y pasó
+
+| Variable | Probado | Resultado |
+|---|---|---|
+| **Intercalación del idioma** | Base creada con `es_ES.utf8` (la que tendrías en Perú) además de `C` | ✅ 10/10, 151 reglas, 71 cifras |
+| **Base de datos vacía desde cero** | `createdb` limpio, sin rastros de corridas previas | ✅ código de salida 0 |
+| **Ruta con espacios** | `/tmp/qa lab/validacion/validar.sh` | ✅ correcto |
+| **Repositorio de solo lectura** | Permisos sin escritura | ✅ falla con mensaje claro, salida 3 |
+| **Sin `psql` en el `PATH`** | `PATH` reducido | ✅ falla con mensaje claro, salida 3 |
+| **`bash` antiguo** | Revisión de construcciones de bash 4+; ninguna presente | ✅ portable a bash 3.2 |
+
+> **Sobre el `bash` antiguo:** el script **tenía** un fallo real aquí. Usaba `${#ARRAY[@]}` sobre
+> arrays vacíos bajo `set -u`, y eso aborta con *"unbound variable"* en **bash 4.3 y anteriores** —
+> que incluye el **bash 3.2 del sistema en macOS**. Reventaba justamente en la corrida exitosa, que
+> es cuando la lista de fallos está vacía. Ahora el conteo va en variables escalares y las
+> expansiones usan el idiom portable `${arr[@]+"${arr[@]}"}`.
+
+### Lo que NO se probó, y podría diferir
+
+| Variable | Situación | Qué hacer |
+|---|---|---|
+| **Versión de PostgreSQL** | Probado **solo en 16.13**. La documentación pide 14+, y esa cifra sale de revisar la sintaxis usada, **no de haberlo ejecutado en 14** | Si usas 14 o 15 y algo falla, dime la versión y el error |
+| **Extensiones** | `fuzzystrmatch`, `pg_trgm` y `unaccent` vienen en `postgresql-contrib`, que en algunas distribuciones **se instala aparte** | `sudo apt install postgresql-contrib` — sin ellas el caso 08 no arranca |
+| **Windows** | El validador es un script de `bash`. **No corre en `cmd` ni en PowerShell** | Usa WSL, Git Bash, o ejecuta los `psql -f` a mano en el orden del README |
+| **Permisos de `CREATE EXTENSION`** | Requiere superusuario o un rol con privilegio. En una base gestionada (RDS, Cloud SQL) puede estar restringido | Pide al administrador que las habilite, o salta el caso 08 |
+| **Memoria y disco** | El caso 04 genera ~600 000 filas y tarda 15-60 s | Con una máquina modesta, reduce `generate_series` como explica su `FUENTES.md` |
+
+### La respuesta corta
+
+**Si tienes PostgreSQL 16 con `postgresql-contrib` y ejecutas en Linux o macOS, sí: va a pasar.**
+Con PostgreSQL 14 o 15 es muy probable que también, pero **no está comprobado**. En Windows
+necesitas WSL o Git Bash para el validador; los scripts SQL en sí corren igual.
+
+Y si algo falla, el validador te dice **qué regla, de qué caso y cuántas filas incumplen**, con el
+registro completo en `validacion/salida/`. Esa es la diferencia entre "no me funciona" y un
+diagnóstico.
+
+---
+
+## 8. Qué significa y qué no significa esta validación
 
 **Lo que certifica:**
 
@@ -238,7 +281,7 @@ caso10-02-datos.log      caso10-04-calidad.log
 
 ---
 
-## 8. Determinismo
+## 9. Determinismo
 
 Ningún script usa `random()`. Todos los datos se generan con expresiones deterministas sobre
 `generate_series` (módulos, restos y aritmética de fechas). **Consecuencia práctica:** dos personas
