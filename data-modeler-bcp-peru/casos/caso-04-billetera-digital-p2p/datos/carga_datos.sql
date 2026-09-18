@@ -37,6 +37,9 @@ INSERT INTO cat_tipo_operacion (tipo_op_cod, tipo_op_desc, signo) VALUES
     ('ENVIO',   'Envío de dinero P2P',            -1),
     ('RECEPCION','Recepción de dinero P2P',        1),
     ('CARGA',   'Carga desde cuenta bancaria',     1),
+    -- La CONTRAPARTIDA de la carga. Sin ella la billetera no tiene partida doble:
+    -- tiene medias entradas, y Contabilidad lo detecta el primer dia.
+    ('SALIDA_PTE', 'Salida de la cuenta puente del banco', -1),
     ('RETIRO',  'Retiro hacia cuenta bancaria',   -1),
     ('PAGO_QR', 'Pago a comercio con QR',         -1),
     ('COBRO_QR','Cobro de comercio con QR',        1);
@@ -205,10 +208,41 @@ FROM    transferencia t;
 --      - ENVIO / PAGO_QR: dos movimientos (cargo al origen, abono al destino).
 -- =====================================================================================
 
+-- =====================================================================================
+-- 2.9 LA CUENTA PUENTE DEL BANCO
+--
+-- Cuando un usuario carga saldo desde su cuenta bancaria, el dinero NO aparece de la nada:
+-- sale de una cuenta del banco -- la cuenta puente -- y entra a la billetera. Modelar solo
+-- la entrada deja la billetera sin partida doble, y entonces "el dinero no se crea ni se
+-- destruye" es una frase, no una propiedad del modelo.
+--
+-- La cuenta puente es un usuario TECNICO: no es una persona, no tiene celular real y no
+-- opera. Se le reserva el identificador 0 justamente para que se note que no es un cliente.
+-- =====================================================================================
+
+INSERT INTO usuario_billetera (usuario_id, tipo_doc_cod, num_doc, nombre_mostrado,
+                               num_celular, ubigeo, es_negocio, estado_usuario, fecha_alta)
+VALUES (0, '06', '20100000001', 'CUENTA PUENTE - BANCO',
+        '999999999', '150101', TRUE, 'ACTIVO', DATE '2026-01-01');
+
+COMMENT ON TABLE usuario_billetera IS
+    'Usuarios de la billetera. El usuario_id = 0 es la CUENTA PUENTE del banco: un usuario '
+    'tecnico, no una persona. Toda carga de saldo tiene su contrapartida ahi.';
+
 INSERT INTO movimiento_billetera (fecha_operacion, usuario_id, transferencia_id,
                                   tipo_op_cod, moneda_cod, monto, monto_con_signo)
 SELECT  t.fecha_operacion, t.usuario_origen_id, t.transferencia_id,
         'CARGA', t.moneda_cod, t.monto, t.monto
+FROM    transferencia t
+WHERE   t.tipo_op_cod = 'CARGA' AND t.estado_cod = 'CONFIRMADA';
+
+-- LA CONTRAPARTIDA. Es la pata que faltaba: el dinero que entra a la billetera sale de la
+-- cuenta puente del banco. Con esto, TODA operacion confirmada genera exactamente dos
+-- movimientos que suman cero, sin excepciones -- y CAL-03 puede exigirlo de verdad.
+INSERT INTO movimiento_billetera (fecha_operacion, usuario_id, transferencia_id,
+                                  tipo_op_cod, moneda_cod, monto, monto_con_signo)
+SELECT  t.fecha_operacion, 0, t.transferencia_id,
+        'SALIDA_PTE', t.moneda_cod, t.monto, -t.monto
 FROM    transferencia t
 WHERE   t.tipo_op_cod = 'CARGA' AND t.estado_cod = 'CONFIRMADA';
 
@@ -236,7 +270,18 @@ WHERE   t.tipo_op_cod IN ('ENVIO','PAGO_QR')
 INSERT INTO saldo_billetera (usuario_id, moneda_cod, saldo)
 SELECT  m.usuario_id, m.moneda_cod, SUM(m.monto_con_signo)
 FROM    movimiento_billetera m
+WHERE   m.usuario_id <> 0          -- la cuenta puente NO es un saldo de usuario: ver nota
 GROUP BY m.usuario_id, m.moneda_cod;
+
+-- LA CUENTA PUENTE NO ENTRA EN saldo_billetera, y no es un atajo:
+-- `saldo_billetera` guarda el saldo de los MONEDEROS. La puente es una cuenta del banco, y
+-- su posicion es negativa por construccion -- ha pagado todas las cargas -- asi que chocaria
+-- con `ck_saldo_billetera`, que exige saldo no negativo. Relajar ese CHECK para que quepa
+-- seria destruir la garantia que protege a los 3000 usuarios reales.
+--
+-- Y hay una propiedad bonita: la posicion de la puente es EXACTAMENTE menos la suma de todos
+-- los saldos de usuario. Si no lo fuera, el dinero se habria creado o destruido en algun
+-- punto. CAL-16 lo verifica.
 
 -- =====================================================================================
 -- 8. ESTADÍSTICAS Y RESUMEN

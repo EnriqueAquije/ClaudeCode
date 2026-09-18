@@ -255,13 +255,13 @@ Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar
 
 | Qué | Cuánto |
 |---|---:|
-| Usuarios | 3 000 |
+| Usuarios | 3 001 (3 000 personas + la cuenta puente) |
 | Transferencias | 151 500 (148 700 confirmadas, 2 800 rechazadas) |
-| Movimientos | 294 400 |
+| Movimientos | 297 400 |
 | Partición `DEFAULT` | **vacía** |
 | Pares con 3+ transferencias | 14 962 |
 | Días que exceden el límite diario | 182 |
-| Reglas de calidad en `OK` | 15 |
+| Reglas de calidad en `OK` | 17 |
 | Pruebas negativas rechazadas | 6 |
 
 **Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste

@@ -20,7 +20,7 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | `sat_persona_ingreso` | 2 000 | 1 500 + **500**: solo cambió 1 de cada 3 |
 | `sat_persona_canal_digital` | 1 600 | **Satélite nuevo** de la ola 2026 |
 
-Y **16 reglas de calidad en `OK`**.
+Y **17 reglas de calidad en `OK`**.
 
 > **La fila que resume el caso:** el satélite de ingreso creció 500 y no 1 500. Esa diferencia,
 > multiplicada por millones de personas y por cargas mensuales, es la razón económica del `hash_diff`.
@@ -43,6 +43,28 @@ Y **16 reglas de calidad en `OK`**.
 
 **Consecuencias.** Carga paralela sin coordinación; claves idénticas entre entornos y entre
 reprocesos. Costo: 32 caracteres por clave en lugar de 8 bytes.
+
+> ### ⚠️ El hash NO anonimiza. Compruébalo tú mismo
+>
+> Es el malentendido más caro de esta decisión, y casi todo el mundo lo comete: *"el DNI está
+> hasheado, así que el dato está protegido"*. **No lo está.** El DNI peruano tiene 8 dígitos: son
+> 100 millones de combinaciones, y recorrerlas es cuestión de minutos en un portátil.
+>
+> ```sql
+> WITH objetivo AS (SELECT persona_hk, num_doc_bk FROM hub_persona LIMIT 1)
+> SELECT o.num_doc_bk AS dni_real, g.n AS dni_recuperado
+> FROM   objetivo o
+> JOIN   generate_series(70000000, 79999999) AS g(n)
+>   ON   fn_hash_key('01', g.n::TEXT) = o.persona_hk;
+> ```
+>
+> Devuelve el DNI. En Data Vault el hash se usa por su **distribución**, no por su seguridad, y eso
+> es correcto — lo incorrecto es confundir una cosa con la otra.
+>
+> **Si necesitas que la clave misma no sea reversible**, el camino es HMAC con una sal guardada
+> fuera del esquema. Pero entonces pierdes justo la propiedad que hace útil al hash: que dos
+> procesos independientes calculen la misma clave **sin coordinarse**. Es un intercambio real, y
+> este caso elige la distribución y protege el dato con el control que corresponde: el acceso.
 
 ---
 
@@ -72,12 +94,29 @@ calcularse **sobre los mismos atributos y en el mismo orden**, siempre.
 
 | Criterio | Efecto |
 |---|---|
-| **Sensibilidad** | El ingreso es dato sensible (Ley 29733): en tabla aparte se puede dar `GRANT` distinto |
+| **Sensibilidad** | El ingreso es dato sensible (Ley 29733): en tabla aparte se le da un `GRANT` distinto — **y está dado**, ver abajo |
 | **Ritmo de cambio** | La demografía cambia cada ola; el ingreso, no. Juntos, un cambio de edad reescribiría el ingreso |
 | **Fuente** | Cada satélite declara su origen; mezclar fuentes destruye la trazabilidad |
 
 **Consecuencias.** Más tablas y más JOINs para reconstruir la persona. Se compensa con la vista
 `vw_persona_vigente`.
+
+> **La separación física no protege nada por sí sola.** Una versión anterior de este caso separaba
+> el satélite de ingreso "para poder darle un `GRANT` distinto" y **no daba ninguno**: la tabla
+> quedaba tan accesible como el resto. Era una intención presentada como control, que es peor que
+> no tener control, porque tranquiliza.
+>
+> Ahora el esquema crea dos roles y los usa:
+>
+> ```sql
+> GRANT  SELECT ON sat_persona_demografia TO rol_analista_inclusion;
+> REVOKE ALL    ON sat_persona_ingreso  FROM rol_analista_inclusion;
+> GRANT  SELECT ON sat_persona_ingreso    TO rol_datos_sensibles;
+> ```
+>
+> Y **CAL-17** lo verifica consultando `information_schema.role_table_grants`: si alguien quita el
+> `REVOKE`, la regla falla en la siguiente ejecución. Es la diferencia entre documentar un control
+> y tenerlo.
 
 ---
 

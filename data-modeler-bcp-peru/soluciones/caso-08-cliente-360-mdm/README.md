@@ -15,12 +15,12 @@ psql -d bcp_lab -f 05-calidad-datos.sql
 | Concepto | Valor |
 |---|---|
 | Registros en los 6 sistemas | 5 407 |
-| **Clientes reales (maestros)** | **4 592** |
-| Duplicados resueltos | 953 |
-| Candidatos en revisión manual (homónimos) | 12 |
-| **Clientes presentes en 3 o más sistemas** | **212** (179 en tres, 33 en cuatro) |
+| **Clientes reales (maestros)** | **4 619** |
+| Duplicados resueltos automáticamente | 925 |
+| Candidatos a revisión humana | 40 |
+| **Clientes presentes en 3 o más sistemas** | **193** |
 | Referencias cruzadas | 5 407 |
-| Trazas de linaje | 14 082 |
+| Trazas de linaje | 14 161 |
 | Reglas de calidad en `OK` | **16 / 16** |
 
 > **Por qué 5 407 registros dan 4 592 clientes y no 5 212.** La misma persona aparece en varios

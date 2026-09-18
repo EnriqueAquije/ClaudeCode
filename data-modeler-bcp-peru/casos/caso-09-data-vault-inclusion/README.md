@@ -240,7 +240,7 @@ Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar
 | `sat_persona_demografia` | 3 000 (todos cumplieron un año) |
 | `sat_persona_ingreso` | 2 000 (solo cambió 1 de cada 3) |
 | `sat_persona_canal_digital` | 1 600 (satélite nuevo de la ola 2026) |
-| Reglas de calidad en `OK` | 16 |
+| Reglas de calidad en `OK` | 17 |
 | Pruebas negativas rechazadas | 6 |
 
 **Si no coinciden**, en orden de probabilidad: cargaste dos veces sin recrear el esquema · editaste

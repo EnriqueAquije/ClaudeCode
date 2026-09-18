@@ -323,3 +323,57 @@ GROUP BY hp.persona_hk, hp.num_doc_bk, pv.edad, pv.sexo, pv.nivel_educativo,
 
 COMMENT ON VIEW vw_inclusion_financiera IS
     'Information Mart: la vista plana que responde las preguntas de inclusion financiera.';
+
+-- =====================================================================================
+-- CONTROL DE ACCESO AL DATO SENSIBLE
+--
+-- El ADR-03 separa `sat_persona_ingreso` porque el ingreso es dato sensible bajo la
+-- Ley 29733 y "asi se le puede dar un GRANT distinto". Eso solo es cierto si el GRANT
+-- EXISTE. Separar la tabla y no restringirla no protege nada: es una intencion, no un
+-- control. Aqui se implementa de verdad, y CAL-17 lo verifica.
+--
+-- SOBRE LA CLAVE HASH Y LA PRIVACIDAD -- leelo, porque es el error mas sutil del caso:
+-- `persona_hk` es MD5 del tipo y numero de documento. En Data Vault eso es CORRECTO:
+-- el hash se usa por su DISTRIBUCION, no por su seguridad. Lo que NO puedes creer es
+-- que el hash anonimice a nadie. El DNI peruano tiene 8 digitos: son 100 millones de
+-- combinaciones, y recorrerlas es cuestion de minutos en un portatil. Compruebalo:
+--
+--   WITH objetivo AS (SELECT persona_hk FROM hub_persona LIMIT 1)
+--   SELECT g.n FROM objetivo o
+--   JOIN generate_series(70000000, 79999999) AS g(n)
+--     ON fn_hash_key('01', g.n::TEXT) = o.persona_hk;
+--
+-- Quien tenga acceso al satelite "protegido" tiene los documentos. Por eso la proteccion
+-- real es el control de acceso, no el hash. Si necesitas que la clave misma no sea
+-- reversible, el camino es HMAC con una sal guardada FUERA del esquema -- pero entonces
+-- pierdes la propiedad que hace util al hash: que dos procesos independientes calculen
+-- la misma clave sin coordinarse.
+-- =====================================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rol_analista_inclusion') THEN
+        CREATE ROLE rol_analista_inclusion;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rol_datos_sensibles') THEN
+        CREATE ROLE rol_datos_sensibles;
+    END IF;
+END $$;
+
+GRANT USAGE ON SCHEMA caso09 TO rol_analista_inclusion, rol_datos_sensibles;
+
+-- El analista ve todo el Data Vault MENOS el ingreso.
+GRANT SELECT ON hub_persona, hub_hogar, hub_distrito, hub_producto,
+                lnk_persona_hogar, lnk_hogar_distrito, lnk_persona_producto,
+                sat_persona_demografia, sat_persona_canal_digital,
+                sat_hogar_caracteristicas, sat_distrito_geografia,
+                sat_producto_descripcion, sat_persona_producto
+      TO rol_analista_inclusion;
+
+-- El ingreso requiere un rol aparte, que es justo lo que el ADR-03 prometia.
+REVOKE ALL   ON sat_persona_ingreso FROM rol_analista_inclusion;
+GRANT  SELECT ON sat_persona_ingreso TO   rol_datos_sensibles;
+
+COMMENT ON TABLE sat_persona_ingreso IS
+    'DATO SENSIBLE (Ley 29733, art. 2.5: los ingresos son dato sensible). Acceso restringido '
+    'a rol_datos_sensibles. La separacion fisica no protege por si sola: el GRANT si.';

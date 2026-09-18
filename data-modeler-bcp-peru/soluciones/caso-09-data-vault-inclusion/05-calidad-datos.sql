@@ -26,6 +26,20 @@ WITH resultados AS (
            'Hay datos cargados: versiones en el satelite de demografia' AS descripcion,
            (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM sat_persona_demografia) AS incumple
     UNION ALL
+    -- RN-08 estaba huerfana: el ADR-03 prometia control de acceso sobre el dato sensible
+    -- y no habia ningun GRANT. Separar la tabla no protege; el privilegio si.
+    SELECT 'CAL-17' AS regla, 'Seguridad' AS familia,
+           'El satelite de ingreso tiene control de acceso propio' AS descripcion,
+           (SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM information_schema.role_table_grants
+                WHERE table_schema = 'caso09' AND table_name = 'sat_persona_ingreso'
+                  AND grantee = 'rol_datos_sensibles' AND privilege_type = 'SELECT')
+              AND NOT EXISTS (
+                SELECT 1 FROM information_schema.role_table_grants
+                WHERE table_schema = 'caso09' AND table_name = 'sat_persona_ingreso'
+                  AND grantee = 'rol_analista_inclusion')
+              THEN 0 ELSE 1 END) AS incumple
+    UNION ALL
     SELECT 'CAL-01', 'Integridad del hash',
            'El hash de cada hub corresponde a su llave de negocio',
            (SELECT COUNT(*) FROM hub_persona  WHERE persona_hk  <> fn_hash_key(tipo_doc_bk, num_doc_bk))

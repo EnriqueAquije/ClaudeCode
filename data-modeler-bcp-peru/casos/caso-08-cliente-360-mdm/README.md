@@ -279,11 +279,11 @@ Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar
 | Qué | Cuánto |
 |---|---:|
 | Registros en los 6 sistemas | 5 407 |
-| Clientes maestros | 4 592 |
-| Duplicados resueltos automáticamente | 953 |
-| Homónimos a revisión manual | 12 |
-| Clientes en 3 o más sistemas | 212 |
-| Trazas de linaje | 14 082 |
+| Clientes maestros | 4 619 |
+| Duplicados resueltos automáticamente | 925 (solo transposiciones) |
+| Candidatos a revisión humana | 40 (12 homónimos + 28 documentos discrepantes) |
+| Clientes en 3 o más sistemas | 193 |
+| Trazas de linaje | 14 161 |
 | Reglas de calidad en `OK` | 16 |
 | Pruebas negativas rechazadas | 6 |
 

@@ -50,7 +50,7 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     SELECT 'DOC-0307','caso03','estados de cuenta = 2400',         2400, (SELECT COUNT(*) FROM caso03.estado_cuenta)
     -- ---------------------------------------------------------------- caso 04
     UNION ALL
-    SELECT 'DOC-0401','caso04','usuarios = 3000',                  3000, (SELECT COUNT(*) FROM caso04.usuario_billetera)
+    SELECT 'DOC-0401','caso04','usuarios = 3001 (3000 + la cuenta puente)', 3001, (SELECT COUNT(*) FROM caso04.usuario_billetera)
     UNION ALL
     SELECT 'DOC-0402','caso04','transferencias = 151500',        151500, (SELECT COUNT(*) FROM caso04.transferencia)
     UNION ALL
@@ -58,7 +58,7 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     UNION ALL
     SELECT 'DOC-0404','caso04','rechazadas = 2800',                2800, (SELECT COUNT(*) FROM caso04.transferencia WHERE estado_cod = 'RECHAZADA')
     UNION ALL
-    SELECT 'DOC-0405','caso04','movimientos = 294400',           294400, (SELECT COUNT(*) FROM caso04.movimiento_billetera)
+    SELECT 'DOC-0405','caso04','movimientos = 297400',           297400, (SELECT COUNT(*) FROM caso04.movimiento_billetera)
     UNION ALL
     SELECT 'DOC-0406','caso04','particion DEFAULT vacia',             0, (SELECT COUNT(*) FROM caso04.movimiento_billetera_default)
     -- ---------------------------------------------------------------- caso 05
@@ -114,15 +114,15 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     UNION ALL
     SELECT 'DOC-0801','caso08','registros en los 6 sistemas = 5407', 5407, (SELECT COUNT(*) FROM caso08.cliente_fuente)
     UNION ALL
-    SELECT 'DOC-0802','caso08','clientes maestros = 4592',          4592, (SELECT COUNT(*) FROM caso08.cliente_maestro)
+    SELECT 'DOC-0802','caso08','clientes maestros = 4619',          4619, (SELECT COUNT(*) FROM caso08.cliente_maestro)
     UNION ALL
-    SELECT 'DOC-0803','caso08','duplicados resueltos = 953',         953, (SELECT COUNT(*) FROM caso08.match_candidato WHERE decision = 'AUTO_MATCH')
+    SELECT 'DOC-0803','caso08','duplicados resueltos automaticamente = 925', 925, (SELECT COUNT(*) FROM caso08.match_candidato WHERE decision = 'AUTO_MATCH')
     UNION ALL
-    SELECT 'DOC-0804','caso08','homonimos en revision manual = 12',   12, (SELECT COUNT(*) FROM caso08.match_candidato WHERE decision = 'REVISION')
+    SELECT 'DOC-0804','caso08','candidatos a revision humana = 40',   40, (SELECT COUNT(*) FROM caso08.match_candidato WHERE decision = 'REVISION')
     UNION ALL
     SELECT 'DOC-0805','caso08','referencias cruzadas = 5407',       5407, (SELECT COUNT(*) FROM caso08.cliente_xref)
     UNION ALL
-    SELECT 'DOC-0806','caso08','trazas de linaje = 14082',         14082, (SELECT COUNT(*) FROM caso08.cliente_maestro_linaje)
+    SELECT 'DOC-0806','caso08','trazas de linaje = 14161',         14161, (SELECT COUNT(*) FROM caso08.cliente_maestro_linaje)
     -- ---------------------------------------------------------------- caso 09
     UNION ALL
     SELECT 'DOC-0901','caso09','hub_persona = 1600',               1600, (SELECT COUNT(*) FROM caso09.hub_persona)
@@ -158,10 +158,16 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     SELECT 'DOC-1009','caso10','registros del envio de junio = 417',  417, (SELECT cant_registros FROM caso10.reporte_envio
                                                                             WHERE periodo = '202606' AND num_envio = 1)
     UNION ALL
+    -- La identidad contable de la billetera: la cuenta puente debe tener exactamente
+    -- menos lo que tienen todos los usuarios juntos.
+    SELECT 'DOC-0408','caso04','la cuenta puente cuadra con los saldos de usuario',
+           0, (SELECT (COALESCE((SELECT SUM(monto_con_signo) FROM caso04.movimiento_billetera WHERE usuario_id=0),0)
+                    + COALESCE((SELECT SUM(saldo) FROM caso04.saldo_billetera),0))::BIGINT)
+    UNION ALL
     -- Que el MDM tenga algo que consolidar: clientes presentes en 3 o mas sistemas.
     -- Antes era 0, porque cada sistema usaba su propio rango de documentos.
-    SELECT 'DOC-0807','caso08','clientes en 3 o mas sistemas = 212',
-           212, (SELECT COUNT(*) FROM caso08.cliente_maestro WHERE cant_fuentes >= 3)
+    SELECT 'DOC-0807','caso08','clientes en 3 o mas sistemas = 193',
+           193, (SELECT COUNT(*) FROM caso08.cliente_maestro WHERE cant_fuentes >= 3)
     UNION ALL
     -- Que la red de contactos exista: pares origen-destino con 3+ transferencias.
     -- Antes era 0, porque ningun par se repetia nunca.

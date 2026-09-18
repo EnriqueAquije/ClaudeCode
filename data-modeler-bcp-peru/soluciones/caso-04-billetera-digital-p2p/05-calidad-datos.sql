@@ -24,6 +24,23 @@ WITH resultados AS (
            'Hay datos cargados: movimientos de billetera' AS descripcion,
            (SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END FROM movimiento_billetera) AS incumple
     UNION ALL
+    -- La identidad contable de la billetera: lo que el banco puso en la cuenta puente es
+    -- exactamente lo que tienen los usuarios. Si no cuadra, el dinero se creo o se destruyo.
+    SELECT 'CAL-16' AS regla, 'Partida doble' AS familia,
+           'La posicion de la cuenta puente es menos la suma de saldos de usuario' AS descripcion,
+           (SELECT CASE WHEN COALESCE((SELECT SUM(monto_con_signo) FROM movimiento_billetera WHERE usuario_id = 0), 0)
+                      + COALESCE((SELECT SUM(saldo) FROM saldo_billetera), 0) = 0
+                   THEN 0 ELSE 1 END) AS incumple
+    UNION ALL
+    SELECT 'CAL-17', 'Partida doble', 'Toda operacion confirmada genera exactamente 2 movimientos',
+           (SELECT COUNT(*) FROM (
+                SELECT t.transferencia_id, t.fecha_operacion
+                FROM   transferencia t
+                JOIN   movimiento_billetera m ON m.transferencia_id = t.transferencia_id
+                                             AND m.fecha_operacion  = t.fecha_operacion
+                WHERE  t.estado_cod = 'CONFIRMADA'
+                GROUP BY 1,2 HAVING COUNT(*) <> 2) x)
+    UNION ALL
     SELECT 'CAL-01', 'Dominio',
            'Ninguna billetera con saldo negativo',
            (SELECT COUNT(*) FROM saldo_billetera WHERE saldo < 0) AS incumple
@@ -44,10 +61,13 @@ WITH resultados AS (
                 GROUP  BY t.transferencia_id
                 HAVING COUNT(*) <> 2) x)
     UNION ALL
-    SELECT 'CAL-04', 'Partida doble', 'Los dos movimientos de una P2P suman cero',
+    -- SIN EXCEPCIONES. La version anterior excluia las CARGAS (`tipo_op_cod <> 'CARGA'`)
+    -- porque no cuadraban: tenian una sola pata. Excluir de una regla de cuadre justo lo
+    -- que no cuadra es como tachar la pregunta que no sabes responder. Con la cuenta puente
+    -- modelada, la excepcion sobra y la regla dice lo que siempre debio decir.
+    SELECT 'CAL-04', 'Partida doble', 'Los movimientos de TODA transferencia suman cero',
            (SELECT COUNT(*) FROM (
                 SELECT transferencia_id FROM movimiento_billetera
-                WHERE  tipo_op_cod <> 'CARGA'
                 GROUP  BY transferencia_id HAVING SUM(monto_con_signo) <> 0) x)
     UNION ALL
     SELECT 'CAL-05', 'Consistencia', 'Una transferencia no confirmada NO mueve dinero',

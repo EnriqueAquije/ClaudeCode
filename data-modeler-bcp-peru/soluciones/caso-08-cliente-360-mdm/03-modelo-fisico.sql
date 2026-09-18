@@ -94,6 +94,27 @@ COMMENT ON COLUMN cliente_fuente.nombre_normalizado IS
     'Es lo unico que se compara al hacer matching por nombre; el nombre original NO se toca.';
 
 -- =====================================================================================
+-- DETECCION DE TRANSPOSICION
+--
+-- La distancia de edicion NO distingue dos errores muy distintos:
+--   71000031 vs 71000013  -> transposicion: los MISMOS digitos, dos de ellos intercambiados
+--   71000031 vs 71000097  -> digitos DISTINTOS: puede ser otra persona
+-- Ambos dan distancia 2, y fusionarlos automaticamente por igual es el error mas grave
+-- que puede cometer un MDM. En el Peru los homonimos y los hermanos con documentos
+-- correlativos son frecuentes.
+-- =====================================================================================
+CREATE FUNCTION fn_es_transposicion(p_a TEXT, p_b TEXT) RETURNS BOOLEAN
+LANGUAGE sql IMMUTABLE AS $$
+    SELECT LENGTH(p_a) = LENGTH(p_b)
+       AND LEVENSHTEIN(p_a, p_b) = 2
+       AND (SELECT STRING_AGG(c, '' ORDER BY c) FROM REGEXP_SPLIT_TO_TABLE(p_a, '') AS c)
+         = (SELECT STRING_AGG(c, '' ORDER BY c) FROM REGEXP_SPLIT_TO_TABLE(p_b, '') AS c);
+$$;
+COMMENT ON FUNCTION fn_es_transposicion IS
+    'TRUE si los dos documentos tienen exactamente los mismos digitos con dos intercambiados. '
+    'Es la unica forma de error de digitacion que se puede fusionar sin intervencion humana.';
+
+-- =====================================================================================
 -- 3. CALIDAD DE CADA REGISTRO
 --    No todas las fuentes tienen la misma calidad. Medirlo permite decidir con criterio.
 -- =====================================================================================

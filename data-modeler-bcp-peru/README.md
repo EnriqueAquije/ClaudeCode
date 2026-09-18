@@ -35,7 +35,7 @@ de esto para empezar el caso 01.
 >
 > | Casos válidos | Reglas de calidad | Pruebas negativas | Cifras verificadas | En `FALLA` |
 > |:-:|:-:|:-:|:-:|:-:|
-> | **10 / 10** | **151** `OK` | **62** rechazadas | **71** | **0** |
+> | **10 / 10** | **154** `OK` | **62** rechazadas | **71** | **0** |
 >
 > Más **12 reglas del estándar de modelado**, que comprueban que los esquemas cumplan las
 > convenciones que el propio repositorio publica.
@@ -390,7 +390,7 @@ psql -d bcp_lab -f soluciones/caso-01-core-cuentas-ahorro/04-consultas-negocio.s
 ```
 
 El script devuelve **código de salida 0** si todos los modelos se crean, todos los datos cargan,
-todas las consultas responden, **las 151 reglas de calidad quedan en `OK`** y **las 66 cifras que
+todas las consultas responden, **las 154 reglas de calidad quedan en `OK`** y **las 66 cifras que
 los READMEs prometen coinciden con la base**. Si algo falla, imprime la regla exacta y deja el
 registro en `validacion/salida/`.
 

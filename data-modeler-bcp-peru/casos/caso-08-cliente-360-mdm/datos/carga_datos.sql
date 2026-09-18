@@ -88,7 +88,13 @@ INSERT INTO cliente_fuente (fuente_cod, id_origen, tipo_doc_cod, num_doc, nombre
                             ubigeo, telefono, fecha_actualizacion)
 SELECT  'BILLETERA', u.usuario_id::TEXT, u.tipo_doc_cod, u.num_doc,
         u.nombre_mostrado, u.ubigeo, u.num_celular, DATE '2026-09-30'
-FROM    caso04.usuario_billetera u;
+FROM    caso04.usuario_billetera u
+-- LAS CUENTAS TECNICAS NO SON CLIENTES.
+-- El usuario 0 de la billetera es la cuenta puente del banco. Existe en el sistema fuente,
+-- tiene RUC y nombre, y si nadie la excluye entra al maestro como un cliente mas -- con su
+-- golden record, su score de confianza y su linaje. Es un error clasico de MDM: la fuente
+-- tiene filas tecnicas, y el maestro se contamina con ellas.
+WHERE   u.usuario_id <> 0;
 
 -- 2.4 Monitoreo PLAFT (caso 07)
 INSERT INTO cliente_fuente (fuente_cod, id_origen, tipo_doc_cod, num_doc, razon_social,
@@ -109,10 +115,22 @@ INSERT INTO cliente_fuente (fuente_cod, id_origen, tipo_doc_cod, num_doc, ape_pa
 SELECT  'CRM',
         'CRM-' || c.cliente_id,
         c.tipo_doc_cod,
-        -- Transposición de los dos últimos dígitos: 70000013 -> 70000031
-        SUBSTRING(c.num_doc, 1, LENGTH(c.num_doc) - 2)
-            || SUBSTRING(c.num_doc, LENGTH(c.num_doc), 1)
-            || SUBSTRING(c.num_doc, LENGTH(c.num_doc) - 1, 1),
+        -- DOS errores distintos, y esa es la gracia del caso:
+        --   3 de cada 4: TRANSPOSICIÓN de los dos últimos dígitos (70000013 -> 70000031).
+        --                Los dígitos son los mismos: es un error de tecleo demostrable.
+        --   1 de cada 4: un dígito DISTINTO (70000013 -> 70000093).
+        --                Misma distancia de edición para LEVENSHTEIN, pero puede ser OTRA
+        --                PERSONA. En el Perú, hermanos con documentos correlativos y
+        --                homónimos son frecuentes.
+        -- Solo el primero se puede fusionar automáticamente. El segundo va a revisión.
+        CASE WHEN (c.cliente_id / 4) % 4 = 0
+             THEN SUBSTRING(c.num_doc, 1, LENGTH(c.num_doc) - 2)
+                  || ((SUBSTRING(c.num_doc, LENGTH(c.num_doc) - 1, 1)::INT + 8) % 10)::TEXT
+                  || SUBSTRING(c.num_doc, LENGTH(c.num_doc), 1)
+             ELSE SUBSTRING(c.num_doc, 1, LENGTH(c.num_doc) - 2)
+                  || SUBSTRING(c.num_doc, LENGTH(c.num_doc), 1)
+                  || SUBSTRING(c.num_doc, LENGTH(c.num_doc) - 1, 1)
+        END,
         -- TILDES: el core es un sistema legado que guarda ASCII; el CRM es moderno y
         -- guarda el apellido como se escribe de verdad. Es el escenario mas comun en un
         -- banco peruano, y el que rompe el matching por nombre si la normalizacion no
@@ -203,7 +221,7 @@ INSERT INTO cat_regla_match (regla_cod, regla_nombre, tipo_match, descripcion,
      'Mismo tipo y número de documento en dos sistemas distintos. Es el match más confiable.',
      100.00, 100.00),
     ('M02-DOC-TIPEO',  'Documento con error de digitación', 'PROBABILISTICO',
-     'Mismo nombre normalizado y misma fecha de nacimiento, con documento a distancia de edición <= 2. Detecta transposiciones de dígitos.',
+     'Mismo nombre y fecha de nacimiento, y documento que es una TRANSPOSICIÓN (mismos dígitos, dos intercambiados). Cualquier otra discrepancia va a revisión humana.',
      85.00, 80.00),
     ('M03-NOMBRE-FECHA','Nombre y fecha de nacimiento', 'PROBABILISTICO',
      'Mismo nombre y misma fecha de nacimiento, sin coincidencia de documento. Requiere revisión manual.',
@@ -233,7 +251,13 @@ INSERT INTO match_candidato (fuente_a, id_origen_a, fuente_b, id_origen_b, regla
 SELECT  b.fuente_cod, b.id_origen, a.fuente_cod, a.id_origen,
         'M02-DOC-TIPEO',
         ROUND(85.00 - (LEVENSHTEIN(a.num_doc, b.num_doc) * 2.0), 2),
-        CASE WHEN 85.00 - (LEVENSHTEIN(a.num_doc, b.num_doc) * 2.0) >= 80.00
+        -- LA POLITICA, y es lo que este paso enseña: solo se fusiona sola una TRANSPOSICION,
+        -- que es un error de tecleo demostrable porque los digitos son los mismos. Cualquier
+        -- otra discrepancia en el documento va a revision humana, aunque la distancia sea la
+        -- misma. La asimetria de costos no admite otra cosa: un falso positivo mezcla dos
+        -- historiales crediticios y termina en un reclamo ante Indecopi; un falso negativo
+        -- deja un cliente duplicado, que se corrige mañana.
+        CASE WHEN fn_es_transposicion(a.num_doc, b.num_doc)
              THEN 'AUTO_MATCH' ELSE 'REVISION' END,
         JSONB_BUILD_OBJECT(
             'doc_crm',        a.num_doc,
