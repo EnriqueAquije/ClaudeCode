@@ -421,6 +421,40 @@ if [ $# -eq 0 ] && [ "${N_FALLIDOS}" -eq 0 ] && [ "${MODO_MI_SOLUCION}" -eq 0 ];
 fi
 
 # =====================================================================================
+#  Pruebas de frontera
+#  El punto exacto donde una regla cambia de significado: el monto IGUAL al umbral,
+#  el ultimo dia del mes, la vigencia de un solo dia. Necesitan los 10 casos cargados.
+# =====================================================================================
+
+TOTAL_FRO=0
+FRO_FALLA=0
+
+if [ $# -eq 0 ] && [ "${N_FALLIDOS}" -eq 0 ] && [ "${MODO_MI_SOLUCION}" -eq 0 ]; then
+    titulo "PRUEBAS DE FRONTERA"
+    echo "  La diferencia entre > y >= es invisible en los datos normales y decisiva en el"
+    echo "  borde. Son las preguntas que aparecen en produccion el dia que alguien opera"
+    echo "  por el importe redondo."
+    echo ""
+    LOG_FRO="${SALIDA}/fronteras.log"
+    printf '  %-28s' "verificando"
+    if ejecutar_sql "${RAIZ}/validacion/fronteras.sql" "${LOG_FRO}"; then
+        TOTAL_FRO=$(grep -cE '\| OK *$'    "${LOG_FRO}" || true)
+        FRO_FALLA=$(grep -cE '\| FALLA *$' "${LOG_FRO}" || true)
+        if [ "${FRO_FALLA}" -gt 0 ]; then
+            echo "${ROJO}${FRO_FALLA} FRONTERA(S) MAL RESUELTA(S)${FIN}"
+            grep -E '\| FALLA *$' "${LOG_FRO}" | sed 's/^/      /'
+            FALLIDOS+=("fronteras"); N_FALLIDOS=$((N_FALLIDOS + 1))
+        else
+            echo "${VERDE}${TOTAL_FRO} fronteras correctas${FIN}"
+        fi
+    else
+        echo "${ROJO}ERROR${FIN}"
+        tail -n 12 "${LOG_FRO}" | sed 's/^/      /'
+        FALLIDOS+=("fronteras"); N_FALLIDOS=$((N_FALLIDOS + 1))
+    fi
+fi
+
+# =====================================================================================
 #  Cumplimiento del estandar de modelado
 # =====================================================================================
 
@@ -464,6 +498,9 @@ echo "  Casos válidos        : $(( N_CASOS - N_FALLIDOS ))"
 echo "  Reglas de calidad OK : ${TOTAL_OK}"
 echo "  Reglas en FALLA      : ${TOTAL_FALLA}"
 echo "  Pruebas negativas    : ${TOTAL_NEG} rechazadas, ${TOTAL_NEG_FALLA} aceptadas indebidamente"
+if [ "${TOTAL_FRO}" -gt 0 ] || [ "${FRO_FALLA}" -gt 0 ]; then
+    echo "  Pruebas de frontera  : ${TOTAL_FRO} correctas, ${FRO_FALLA} mal resueltas"
+fi
 if [ "${TOTAL_EST}" -gt 0 ] || [ "${EST_FALLA}" -gt 0 ]; then
     echo "  Estándar de modelado : ${TOTAL_EST} cumplidas, ${EST_FALLA} incumplidas"
 fi

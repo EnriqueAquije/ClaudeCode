@@ -9,8 +9,8 @@ psql -d bcp_lab -f 04-consultas-negocio.sql
 psql -d bcp_lab -f 05-calidad-datos.sql
 ```
 
-**Resultado esperado:** 365 días de calendario (248 hábiles, 15 feriados), 1 240 cotizaciones
-publicadas, 1 820 valores vigentes (**580 por arrastre**), 2 190 saldos ME, 728 posiciones diarias
+**Resultado esperado:** 366 días de calendario (249 hábiles, 15 feriados) — incluye la semilla del 31-dic, 1 245 cotizaciones
+publicadas, 1 830 valores vigentes (**585 por arrastre**), 2 196 saldos ME, 732 posiciones diarias
 y **15 reglas de calidad en `OK`**.
 
 ---

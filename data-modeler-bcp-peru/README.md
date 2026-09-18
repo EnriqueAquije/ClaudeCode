@@ -33,19 +33,21 @@ de esto para empezar el caso 01.
 > Los 10 casos se ejecutaron completos contra **PostgreSQL 16**: modelo físico → carga de datos →
 > consultas de negocio → reglas de calidad.
 >
-> | Casos válidos | Reglas de calidad | Pruebas negativas | Cifras verificadas | En `FALLA` |
-> |:-:|:-:|:-:|:-:|:-:|
-> | **10 / 10** | **159** `OK` | **62** rechazadas | **71** | **0** |
+> | Casos | Reglas de calidad | Pruebas negativas | Fronteras | Estándar | Cifras | En `FALLA` |
+> |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+> | **10 / 10** | **159** | **62** | **16** | **12** | **73** | **0** |
 >
-> Más **12 reglas del estándar de modelado**, que comprueban que los esquemas cumplan las
-> convenciones que el propio repositorio publica.
->
-> Tres cosas distintas, y las tres importan:
+> Seis redes distintas, y cada una ha encontrado al menos un defecto que las otras no veían:
 > **las reglas** comprueban que los datos cumplan lo que el negocio exige;
-> **las pruebas negativas** intentan la operación prohibida y exigen que la base la rechace —
-> son las que detectan que a un modelo le falta una restricción, cosa que una regla sobre datos
-> limpios nunca ve;
-> **las cifras** son las que los READMEs prometen ("900 deudores, 953 duplicados resueltos…").
+> **las pruebas negativas** intentan la operación prohibida y exigen que la base la rechace — son
+> las que detectan que a un modelo le falta una restricción, cosa que una regla sobre datos limpios
+> nunca ve;
+> **las fronteras** atacan el punto exacto donde una regla cambia de significado (el día 8 frente al
+> 9 de atraso, el importe *igual* al umbral) — así se descubrió que el 1 de enero se quedaba sin
+> tipo de cambio;
+> **el estándar** comprueba que los esquemas cumplan las convenciones que el propio repositorio
+> publica;
+> **las cifras** son las que los READMEs prometen ("900 deudores, 925 duplicados resueltos…").
 >
 > Reprodúcelo con `./validacion/validar.sh`. Detalle en
 > [`validacion/REPORTE-VALIDACION.md`](validacion/REPORTE-VALIDACION.md).
@@ -314,6 +316,8 @@ data-modeler-bcp-peru/
     ├── cifras-documentadas.sql        Verifica que los READMEs digan la verdad
     ├── estandares.sql                 Verifica que los modelos cumplan el estándar
     ├── concurrencia.sh                Dos sesiones a la vez sobre la idempotencia
+    ├── version-minima.sh              Deriva qué versión de PostgreSQL hace falta
+    ├── fronteras.sql                  El punto exacto donde una regla cambia de significado
     ├── REPORTE-VALIDACION.md          Resultado de la última ejecución
     └── salida/                        Registros de cada ejecución (no versionados)
 ```
@@ -346,7 +350,7 @@ Van de menor a mayor dificultad y cubren todo el ciclo: OLTP → analítico → 
 ### Requisitos (todos gratuitos)
 
 ```bash
-# 1. PostgreSQL 14 o superior  (probado en 16.13; ver nota abajo)
+# 1. PostgreSQL 14 o superior  (la sintaxis exige 12; probado en 16.13)
 #    Linux:   sudo apt install postgresql postgresql-contrib
 #    macOS:   brew install postgresql@16
 #    Windows: https://www.postgresql.org/download/windows/

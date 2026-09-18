@@ -220,8 +220,8 @@ psql -d bcp_lab -f soluciones/caso-06-tipo-cambio-posicion-me/03-modelo-fisico.s
 psql -d bcp_lab -f casos/caso-06-tipo-cambio-posicion-me/datos/carga_datos.sql
 ```
 
-Resultado esperado: 365 días de calendario (248 hábiles, 15 feriados), 1 240 cotizaciones
-publicadas, 1 820 valores vigentes de los cuales **580 por arrastre**.
+Resultado esperado: 366 días de calendario (249 hábiles, 15 feriados) — incluye la semilla del 31-dic, 1 245 cotizaciones
+publicadas, 1 830 valores vigentes de los cuales **585 por arrastre**.
 
 **Pruebas negativas — cada una debe fallar:**
 
@@ -260,12 +260,12 @@ Los datos son **deterministas**: sin `random()`, así que tu ejecución debe dar
 
 | Qué | Cuánto |
 |---|---:|
-| Días de calendario | 365 (248 hábiles, 15 feriados) |
-| Cotizaciones publicadas | 1 240 |
-| Valores vigentes | 1 820 |
-| De ellos, por arrastre | 580 |
-| Saldos en ME | 2 190 |
-| Posiciones diarias | 728 |
+| Días de calendario | 366 (249 hábiles, 15 feriados) — incluye la semilla del 31-dic |
+| Cotizaciones publicadas | 1 245 |
+| Valores vigentes | 1 830 |
+| De ellos, por arrastre | 585 |
+| Saldos en ME | 2 196 |
+| Posiciones diarias | 732 |
 | Reglas de calidad en `OK` | 15 |
 | Pruebas negativas rechazadas | 6 |
 

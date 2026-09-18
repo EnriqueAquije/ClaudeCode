@@ -11,7 +11,7 @@ Con estas cuatro piezas puedes completar los 10 casos:
 
 | Pieza | Herramienta | Licencia | Descarga |
 |---|---|---|---|
-| Motor de BD | **PostgreSQL 14+** | PostgreSQL License (libre) | <https://www.postgresql.org/download/> |
+| Motor de BD | **PostgreSQL 14+** *(la sintaxis exige 12; se pide 14 porque 12 y 13 ya no reciben parches)* | PostgreSQL License (libre) | <https://www.postgresql.org/download/> |
 | Cliente SQL | **DBeaver Community** | Apache 2.0 | <https://dbeaver.io/download/> |
 | Modelado visual | **pgModeler** o **Oracle SQL Developer Data Modeler** | GPLv3 / gratuito | <https://pgmodeler.io/> · <https://www.oracle.com/database/sqldeveloper/technologies/sql-data-modeler/> |
 | Versionado | **Git + GitHub** | Libre / plan gratuito | <https://git-scm.com/> |

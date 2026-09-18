@@ -76,21 +76,21 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
     SELECT 'DOC-0506','caso05','fact_colocacion_mes = 2795',       2795, (SELECT COUNT(*) FROM caso05.fact_colocacion_mes)
     -- ---------------------------------------------------------------- caso 06
     UNION ALL
-    SELECT 'DOC-0601','caso06','dias de calendario = 365',          365, (SELECT COUNT(*) FROM caso06.cat_calendario)
+    SELECT 'DOC-0601','caso06','dias de calendario = 366 (incluye la semilla del 31-dic)', 366, (SELECT COUNT(*) FROM caso06.cat_calendario)
     UNION ALL
-    SELECT 'DOC-0602','caso06','dias habiles = 248',                248, (SELECT COUNT(*) FROM caso06.cat_calendario WHERE es_dia_habil)
+    SELECT 'DOC-0602','caso06','dias habiles = 249',                249, (SELECT COUNT(*) FROM caso06.cat_calendario WHERE es_dia_habil)
     UNION ALL
     SELECT 'DOC-0603','caso06','feriados = 15',                      15, (SELECT COUNT(*) FROM caso06.cat_calendario WHERE es_feriado)
     UNION ALL
-    SELECT 'DOC-0604','caso06','cotizaciones publicadas = 1240',   1240, (SELECT COUNT(*) FROM caso06.tipo_cambio_publicado)
+    SELECT 'DOC-0604','caso06','cotizaciones publicadas = 1245',   1245, (SELECT COUNT(*) FROM caso06.tipo_cambio_publicado)
     UNION ALL
-    SELECT 'DOC-0605','caso06','valores vigentes = 1820',          1820, (SELECT COUNT(*) FROM caso06.tipo_cambio_vigente)
+    SELECT 'DOC-0605','caso06','valores vigentes = 1830',          1830, (SELECT COUNT(*) FROM caso06.tipo_cambio_vigente)
     UNION ALL
-    SELECT 'DOC-0606','caso06','valores por ARRASTRE = 580',        580, (SELECT COUNT(*) FROM caso06.tipo_cambio_vigente WHERE origen_valor = 'ARRASTRE')
+    SELECT 'DOC-0606','caso06','valores por ARRASTRE = 585',        585, (SELECT COUNT(*) FROM caso06.tipo_cambio_vigente WHERE origen_valor = 'ARRASTRE')
     UNION ALL
-    SELECT 'DOC-0607','caso06','saldos ME = 2190',                 2190, (SELECT COUNT(*) FROM caso06.saldo_me_dia)
+    SELECT 'DOC-0607','caso06','saldos ME = 2196',                 2196, (SELECT COUNT(*) FROM caso06.saldo_me_dia)
     UNION ALL
-    SELECT 'DOC-0608','caso06','posiciones diarias = 728',          728, (SELECT COUNT(*) FROM caso06.posicion_cambio_dia)
+    SELECT 'DOC-0608','caso06','posiciones diarias = 732',          732, (SELECT COUNT(*) FROM caso06.posicion_cambio_dia)
     -- ---------------------------------------------------------------- caso 07
     UNION ALL
     SELECT 'DOC-0701','caso07','clientes monitoreados = 800',       800, (SELECT COUNT(*) FROM caso07.cliente)
@@ -175,6 +175,14 @@ WITH esperado (regla, familia, descripcion, documentado, real) AS (
            14962, (SELECT COUNT(*) FROM (SELECT usuario_origen_id, usuario_destino_id
                                          FROM caso04.transferencia WHERE estado_cod='CONFIRMADA'
                                          GROUP BY 1,2 HAVING COUNT(*) >= 3) x)
+    UNION ALL
+    -- El agujero que encontro la prueba de frontera FRO-09: ningun dia del calendario
+    -- puede quedarse sin tipo de cambio vigente, ni siquiera el primero de la serie.
+    SELECT 'DOC-0609','caso06','dias del calendario SIN tipo de cambio vigente = 0',
+           0, (SELECT COUNT(*) FROM caso06.cat_calendario c
+               WHERE NOT EXISTS (SELECT 1 FROM caso06.tipo_cambio_vigente v
+                                 WHERE v.fecha = c.fecha AND v.moneda_cod = 'USD'
+                                   AND v.tipo_tc_cod = 'CONTABLE_SBS'))
     UNION ALL
     -- EL GRANO. Estas tres cifras son la prueba de que el modelo admite lo que la realidad
     -- entrega: deudores con mas de un tipo de credito vivo. Con el grano anterior la primera

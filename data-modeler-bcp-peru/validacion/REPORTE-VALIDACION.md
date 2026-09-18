@@ -281,16 +281,34 @@ Esta es la pregunta que importa, y la respuesta honesta tiene dos partes.
 
 | Variable | Situación | Qué hacer |
 |---|---|---|
-| **Versión de PostgreSQL** | Probado **solo en 16.13**. La documentación pide 14+, y esa cifra sale de revisar la sintaxis usada, **no de haberlo ejecutado en 14** | Si usas 14 o 15 y algo falla, dime la versión y el error |
+| **Versión de PostgreSQL** | Probado **solo en 16.13**. La sintaxis exige **12 como mínimo** (columnas generadas), derivado con `validacion/version-minima.sh`. Entre 12 y 16 no se ha ejecutado | Si usas una versión intermedia y algo falla, reporta la versión y el error |
 | **Extensiones** | `fuzzystrmatch`, `pg_trgm` y `unaccent` vienen en `postgresql-contrib`, que en algunas distribuciones **se instala aparte** | `sudo apt install postgresql-contrib` — sin ellas el caso 08 no arranca |
 | **Windows** | El validador es un script de `bash`. **No corre en `cmd` ni en PowerShell** | Usa WSL, Git Bash, o ejecuta los `psql -f` a mano en el orden del README |
 | **Permisos de `CREATE EXTENSION`** | Requiere superusuario o un rol con privilegio. En una base gestionada (RDS, Cloud SQL) puede estar restringido | Pide al administrador que las habilite, o salta el caso 08 |
 | **Memoria y disco** | El caso 04 genera ~600 000 filas y tarda 15-60 s | Con una máquina modesta, reduce `generate_series` como explica su `FUENTES.md` |
 
+### Por qué la documentación pide 14 y no 12
+
+La sintaxis funcionaría en 12. **La recomendación de 14+ no es por sintaxis, es por soporte:**
+PostgreSQL 12 dejó de recibir parches en noviembre de 2024 y 13 en noviembre de 2025. Aprender a
+modelar sobre un motor sin soporte es un mal hábito en sí mismo, y en banca peruana ni siquiera es
+una opción: un motor sin parches de seguridad no pasa una revisión de riesgo tecnológico.
+
+Cualquiera puede recalcular el mínimo cuando el material cambie:
+
+```bash
+./validacion/version-minima.sh
+```
+
+Lista cada construcción usada, desde qué versión existe y en cuántos ficheros aparece. **Convierte
+una afirmación en algo comprobable**, que es lo que faltaba.
+
 ### La respuesta corta
 
 **Si tienes PostgreSQL 16 con `postgresql-contrib` y ejecutas en Linux o macOS, sí: va a pasar.**
-Con PostgreSQL 14 o 15 es muy probable que también, pero **no está comprobado**. En Windows
+Con 14 o 15 es muy probable —la sintaxis solo exige 12— pero **no está comprobado**: en el entorno
+donde se validó no había otras versiones disponibles ni acceso al repositorio de PostgreSQL para
+instalarlas. Decirlo es más útil que suponerlo. En Windows
 necesitas WSL o Git Bash para el validador; los scripts SQL en sí corren igual.
 
 Y si algo falla, el validador te dice **qué regla, de qué caso y cuántas filas incumplen**, con el

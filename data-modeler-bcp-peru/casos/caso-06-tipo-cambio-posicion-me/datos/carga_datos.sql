@@ -47,7 +47,16 @@ SELECT  d::DATE,
         fer.nombre,
         EXTRACT(ISODOW FROM d) < 6 AND fer.nombre IS NULL,
         d::DATE = (DATE_TRUNC('month', d) + INTERVAL '1 month - 1 day')::DATE
-FROM        generate_series(DATE '2026-01-01', DATE '2026-12-31', INTERVAL '1 day') AS d
+-- EL CALENDARIO EMPIEZA EL 31 DE DICIEMBRE, NO EL 1 DE ENERO.
+-- Ese dia de mas es la SEMILLA de la serie, y lo descubrio una prueba de frontera:
+-- el 1 de enero es feriado, no hay publicacion, y el arrastre no tiene nada de donde
+-- tirar hacia atras. Resultado: el primer dia del año se quedaba SIN tipo de cambio
+-- vigente, y cualquier valorizacion de ese dia devolvia NULL.
+--
+-- Una serie temporal no empieza en el vacio. Un sistema real arranca cargando el ultimo
+-- valor del periodo anterior, y ese es el patron que hay que modelar: la carga inicial
+-- de una serie necesita SIEMPRE un valor previo, o su primer dia es un agujero.
+FROM        generate_series(DATE '2025-12-31', DATE '2026-12-31', INTERVAL '1 day') AS d
 LEFT JOIN  (VALUES
         (DATE '2026-01-01', 'Año Nuevo'),
         (DATE '2026-04-02', 'Jueves Santo'),
